@@ -360,12 +360,24 @@ Stripe Dashboard → Developers → Webhooks → Add endpoint:
 
 ## Not Yet Included
 
-- ❌ Contact and wholesale forms send email (show success UI but data is not emailed — needs Resend or SendGrid)
-- ❌ Gift card email delivery (cart item recorded in order but not emailed to recipient — needs email service)
-- ❌ Recurring subscriptions (charged as one-time payments — needs Stripe Subscriptions API)
+### Email / Transactional
+- ❌ Contact and wholesale forms save submission UI only — not emailed (needs Resend or SendGrid)
+- ❌ Gift card email delivery — order recorded but not sent to recipient (needs email service)
 - ❌ Fulfillment / "your order has shipped" emails (needs email service)
+
+### Payments / Subscriptions
+- ❌ Recurring subscriptions — charged as one-time payments (needs Stripe Subscriptions API)
+- ❌ Calculated shipping rates — flat rate only: free over $60, $8 otherwise
+
+### Admin Dashboard
+- ❌ Submissions tab — contact, wholesale, and coffee cart form data not saved to DB or surfaced in admin (`app/admin/page.tsx`, `ContactPageClient.tsx`, `WholesalePageClient.tsx`, `CoffeeCartClient.tsx`)
+- ❌ Order sorting and filtering — date range buttons (30 / 60 / 90 days / all time), sort by customer name (`app/admin/orders/page.tsx`)
+- ❌ CSV export for orders — export currently filtered rows with order ID, customer, items, amount, status, date (`app/admin/orders/page.tsx`)
+
+### Shop
+- ❌ Star ratings on coffee cards — requires `Rating` model (userId, coffeeId, stars 1–5), order-history verification before saving, and display on `CoffeeCard` (`components/shop/CoffeeCard.tsx`)
+- ❌ "Notify Me" for out-of-stock coffees — requires `StockAlert` model, email trigger when admin marks item back in stock (`components/shop/CoffeeCard.tsx`)
 - ❌ Inventory management / quantity tracking
-- ❌ Calculated shipping rates (flat rate: free over $60, $8 otherwise)
 
 ---
 
