@@ -1,0 +1,59 @@
+export interface Coffee {
+  id: string;
+  slug: string;
+  name: string;
+  subtitle: string;
+  origin: string;
+  region?: string;
+  process: string;
+  elevation: string;
+  roast: 'Light' | 'Medium' | 'Medium-Dark' | 'Dark';
+  notes: string[];
+  prices: Record<string, number>;
+  gradient: string;
+  description: string;
+  roastOptions: string[];
+  inStock: boolean;
+  featured: boolean;
+  badge?: string;
+  badgeClass?: 'badge-gold' | 'badge-red';
+}
+
+export interface Subscription {
+  id: string;
+  name: string;
+  freq: string;
+  desc: string;
+  features: string[];
+  roastOptions: string[];
+  price: number;
+  period: string;
+  gradient: string;
+  badge: string | null;
+  inStock: boolean;
+}
+
+export interface Merch {
+  id: string;
+  name: string;
+  icon: string;
+  desc: string;
+  price: number;
+  options: string[] | null;
+  gradient: string;
+}
+
+export interface CartItem {
+  key: string;
+  id: string;
+  type: 'coffee' | 'sub' | 'merch' | 'gift';
+  name: string;
+  variant: string;
+  price: number;
+  gradient: string;
+  icon?: string;
+  slug?: string;
+  qty: number;
+}
+
+export type RoastFilter = 'all' | 'light' | 'medium' | 'medium-dark' | 'dark';

@@ -1,65 +1,229 @@
-import Image from "next/image";
+import Link from 'next/link';
+import { prisma } from '@/lib/db';
+import { dbToCoffee } from '@/lib/data/db-products';
+import { FeaturedCoffeeCard } from '@/components/home/FeaturedCoffeeCard';
+import { CoffeeIcon, FlaskIcon, LeafIcon, FlowerIcon } from '@phosphor-icons/react/dist/ssr';
 
-export default function Home() {
+function getVal(map: Map<string, string>, key: string, fallback: string) {
+  return map.get(key) ?? fallback;
+}
+
+export default async function HomePage() {
+  const [featuredProducts, contentRows] = await Promise.all([
+    prisma.product.findMany({
+      where: { type: 'coffee', inStock: true, featured: true },
+      orderBy: { position: 'asc' },
+      take: 4,
+    }),
+    prisma.siteContent.findMany({ where: { page: 'home' } }),
+  ]);
+
+  // Fallback to first 4 in-stock by position if none are marked featured
+  const products = featuredProducts.length > 0
+    ? featuredProducts
+    : await prisma.product.findMany({
+        where: { type: 'coffee', inStock: true },
+        orderBy: { position: 'asc' },
+        take: 4,
+      });
+
+  const coffees = products.map(dbToCoffee);
+  const c = new Map(contentRows.map((r) => [r.key, r.value]));
+
+  const heroTitle = getVal(c, 'hero_title', 'Good Days Start Here');
+  const heroSubtitle = getVal(c, 'hero_subtitle', 'Small-batch specialty coffee, roasted to order and shipped within 24 hours. Ethically sourced from farms we know by name.');
+  const featuredEyebrow = getVal(c, 'featured_eyebrow', 'The Collection');
+  const featuredHeading = getVal(c, 'featured_heading', 'Our Coffees');
+  const featuredBody = getVal(c, 'featured_body', 'Single-origins and seasonal favorites, roasted in small batches every week.');
+  const subHeading = getVal(c, 'sub_heading', 'Never Run Out of Coffee');
+  const subBody = getVal(c, 'sub_body', 'Fresh coffee delivered on your schedule. Flexible plans that pause or cancel anytime.');
+  const storyEyebrow = getVal(c, 'story_eyebrow', 'Roasting Since 2019');
+  const storyHeading = getVal(c, 'story_heading', 'Coffee That Tells a Story');
+  const storyBody = getVal(c, 'story_body', 'We started with one roaster, one origin, and a belief that great coffee should be honest.');
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
+    <>
+      {/* ── Hero ── */}
+      <section className="relative overflow-hidden min-h-[90vh] flex items-center" style={{ backgroundColor: '#F5EFE6' }}>
+        <div
+          className="absolute inset-0 bg-cover bg-center bg-no-repeat"
+          style={{ backgroundImage: 'url(/images/hero-bg.png)' }}
         />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
+        <div className="relative max-w-7xl mx-auto px-4 sm:px-8 py-24 md:py-32 w-full">
+          <p className="text-amber-700 text-xs font-semibold uppercase tracking-[0.2em] mb-6">
+            Coastal Granny&apos;s Collective · San Diego, CA
           </p>
+          <h1 className="font-serif text-5xl sm:text-6xl md:text-7xl lg:text-8xl leading-[0.95] mb-8 max-w-4xl text-stone-900">
+            {heroTitle}
+          </h1>
+          <p className="text-stone-600 text-lg max-w-lg mb-10 leading-relaxed">
+            {heroSubtitle}
+          </p>
+          <div className="flex flex-wrap gap-4">
+            <Link
+              href="/shop/coffee"
+              className="inline-flex items-center gap-2 bg-stone-900 hover:bg-stone-700 text-white font-semibold px-8 py-4 rounded-full transition-colors text-sm"
+            >
+              Shop Coffee
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
+                <path d="M3 8h10M9 4l4 4-4 4"/>
+              </svg>
+            </Link>
+            <Link
+              href="/shop/subscriptions"
+              className="inline-flex items-center gap-2 border border-stone-900/30 hover:border-stone-900/60 text-stone-900 font-semibold px-8 py-4 rounded-full transition-colors text-sm hover:bg-stone-900/5"
+            >
+              Subscribe &amp; Save
+            </Link>
+          </div>
+
+          <div className="mt-20 flex flex-wrap gap-10">
+            {[
+              { n: '6+', label: 'Origins' },
+              { n: '100%', label: 'Roast to Order' },
+              { n: 'SD', label: 'San Diego' },
+            ].map((s) => (
+              <div key={s.label}>
+                <p className="font-serif text-3xl text-amber-700">{s.n}</p>
+                <p className="text-xs text-stone-500 uppercase tracking-widest mt-0.5">{s.label}</p>
+              </div>
+            ))}
+          </div>
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
+      </section>
+
+      {/* ── Featured Coffees ── */}
+      <section className="bg-white py-20 px-4 sm:px-6">
+        <div className="max-w-7xl mx-auto">
+          <div className="flex items-end justify-between mb-10">
+            <div>
+              <p className="text-xs font-semibold text-amber-700 uppercase tracking-widest mb-1">
+                {featuredEyebrow}
+              </p>
+              <h2 className="font-serif text-4xl text-stone-900">{featuredHeading}</h2>
+              <p className="text-stone-500 text-sm mt-2 max-w-md">{featuredBody}</p>
+            </div>
+            <Link
+              href="/shop/coffee"
+              className="hidden sm:inline-flex text-sm font-medium text-amber-700 hover:text-amber-600 gap-1 items-center whitespace-nowrap"
+            >
+              View all
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
+                <path d="M3 8h10M9 4l4 4-4 4"/>
+              </svg>
+            </Link>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            {coffees.map((coffee) => (
+              <FeaturedCoffeeCard
+                key={coffee.id}
+                slug={coffee.slug}
+                name={coffee.name}
+                subtitle={coffee.subtitle}
+                origin={coffee.origin}
+                notes={coffee.notes}
+                prices={coffee.prices}
+                gradient={coffee.gradient}
+                badge={coffee.badge}
+              />
+            ))}
+          </div>
+
+          <div className="mt-6 text-center sm:hidden">
+            <Link href="/shop/coffee" className="text-sm font-medium text-amber-700 hover:underline">
+              View all coffees →
+            </Link>
+          </div>
+        </div>
+      </section>
+
+      {/* ── Subscription CTA ── */}
+      <section
+        className="relative py-20 px-4 sm:px-6 overflow-hidden"
+        style={{ backgroundColor: '#F5EFE6' }}
+      >
+        <div
+          className="absolute inset-0 bg-cover bg-center bg-no-repeat"
+          style={{ backgroundImage: 'url(/images/sub-bg.png)' }}
+        />
+        <div className="relative max-w-4xl mx-auto text-center">
+          <CoffeeIcon size={48} weight="duotone" color="#CC9818" className="mb-4 mx-auto" />
+          <h2 className="font-serif text-4xl md:text-5xl mb-4 text-stone-900">{subHeading}</h2>
+          <p className="text-stone-600 max-w-lg mx-auto mb-8 leading-relaxed">{subBody}</p>
+          <div className="flex flex-wrap gap-4 justify-center">
+            <Link
+              href="/shop/subscriptions"
+              className="bg-stone-900 text-white font-semibold px-8 py-4 rounded-full hover:bg-stone-700 transition-colors text-sm"
+            >
+              See Subscription Plans
+            </Link>
+            <Link
+              href="/shop/coffee"
+              className="border border-stone-900/30 text-stone-900 font-medium px-8 py-4 rounded-full hover:bg-stone-900/5 transition-colors text-sm"
+            >
+              One-Time Order
+            </Link>
+          </div>
+        </div>
+      </section>
+
+      {/* ── Brand Story ── */}
+      <section className="bg-stone-50 py-20 px-4 sm:px-6">
+        <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+          <div className="rounded-3xl h-72 lg:h-96 overflow-hidden">
+            <img
+              src="/images/cg-logo-illustration.png"
+              alt="Coastal Granny's Collective"
+              className="w-full h-full object-cover"
             />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+          </div>
+          <div>
+            <p className="text-xs font-semibold text-amber-700 uppercase tracking-widest mb-3">
+              {storyEyebrow}
+            </p>
+            <h2 className="font-serif text-4xl text-stone-900 mb-5">{storyHeading}</h2>
+            <p className="text-stone-500 leading-relaxed mb-8">{storyBody}</p>
+            <div className="flex flex-wrap gap-3">
+              <Link
+                href="/about"
+                className="inline-flex items-center gap-2 bg-stone-900 text-white font-medium px-6 py-3 rounded-full hover:bg-stone-700 transition-colors text-sm"
+              >
+                Our Story
+              </Link>
+              <Link
+                href="/wholesale"
+                className="inline-flex items-center gap-2 border border-stone-300 text-stone-700 font-medium px-6 py-3 rounded-full hover:bg-stone-100 transition-colors text-sm"
+              >
+                Wholesale
+              </Link>
+            </div>
+          </div>
         </div>
-      </main>
-    </div>
+      </section>
+
+      {/* ── Values strip ── */}
+      <section className="bg-white border-t border-stone-100 py-14 px-4 sm:px-6">
+        <div className="max-w-7xl mx-auto grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
+          {[
+            { icon: 'coffee', title: 'Roasted Fresh', desc: 'Pulled from the drum to your door — no warehouse stock ever' },
+            { icon: 'flask', title: 'Experimental', desc: 'Co-ferments, carbonic macerations, and rare varieties you\'ve never tried' },
+            { icon: 'leaf', title: 'Traceable', desc: 'Every origin is known, named, and worth talking about' },
+            { icon: 'flower', title: 'Community', desc: 'Pop-ups and private tastings all around San Diego' },
+          ].map((v) => (
+            <div key={v.title}>
+              <span className="block mb-3">
+                {v.icon === 'coffee' && <CoffeeIcon size={40} weight="duotone" color="#C8921A" className="mx-auto" />}
+                {v.icon === 'flask' && <FlaskIcon size={40} weight="duotone" color="#C8921A" className="mx-auto" />}
+                {v.icon === 'leaf' && <LeafIcon size={40} weight="duotone" color="#C8921A" className="mx-auto" />}
+                {v.icon === 'flower' && <FlowerIcon size={40} weight="duotone" color="#C8921A" className="mx-auto" />}
+              </span>
+              <p className="font-semibold text-stone-900 text-base mb-2">{v.title}</p>
+              <p className="text-sm text-stone-400 leading-relaxed">{v.desc}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+    </>
   );
 }

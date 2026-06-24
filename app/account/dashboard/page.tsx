@@ -1,0 +1,158 @@
+import { auth } from '@/auth';
+import { redirect } from 'next/navigation';
+import { prisma } from '@/lib/db';
+import Link from 'next/link';
+
+export const metadata = { title: 'My Account — Grounds Coffee Co.' };
+
+const STATUS_COLORS: Record<string, string> = {
+  paid: 'bg-green-100 text-green-800',
+  refunded: 'bg-blue-100 text-blue-800',
+  disputed: 'bg-red-100 text-red-800',
+  pending: 'bg-amber-100 text-amber-800',
+  failed: 'bg-stone-100 text-stone-600',
+};
+
+export default async function AccountDashboard() {
+  const session = await auth();
+  if (!session?.user?.email) redirect('/account/login');
+
+  const user = await prisma.user.findUnique({
+    where: { email: session.user.email },
+    select: { id: true, name: true, email: true, createdAt: true },
+  });
+
+  if (!user) redirect('/account/login');
+
+  const orders = await prisma.order.findMany({
+    where: { userId: user.id },
+    include: { items: true },
+    orderBy: { createdAt: 'desc' },
+  });
+
+  // Fallback: also check by email for older orders placed before userId was linked
+  const emailOrders = await prisma.order.findMany({
+    where: { customerEmail: user.email, userId: null },
+    include: { items: true },
+    orderBy: { createdAt: 'desc' },
+  });
+
+  const allOrders = [...orders, ...emailOrders];
+
+  return (
+    <div className="min-h-screen bg-stone-50">
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 py-12">
+        {/* Header */}
+        <div className="flex items-center justify-between mb-10">
+          <div>
+            <h1 className="font-serif text-3xl text-stone-900">My Account</h1>
+            <p className="text-stone-500 text-sm mt-1">{user.email}</p>
+          </div>
+          <Link
+            href="/api/auth/signout"
+            className="text-sm text-stone-500 hover:text-stone-900 transition-colors"
+          >
+            Sign out
+          </Link>
+        </div>
+
+        {/* Account info */}
+        <div className="bg-white rounded-2xl border border-stone-100 shadow-sm p-6 mb-8">
+          <h2 className="font-medium text-stone-900 mb-4">Account Details</h2>
+          <div className="grid grid-cols-2 gap-4 text-sm">
+            <div>
+              <p className="text-stone-400 text-xs uppercase tracking-wider mb-1">Name</p>
+              <p className="text-stone-700">{user.name ?? '—'}</p>
+            </div>
+            <div>
+              <p className="text-stone-400 text-xs uppercase tracking-wider mb-1">Email</p>
+              <p className="text-stone-700">{user.email}</p>
+            </div>
+            <div>
+              <p className="text-stone-400 text-xs uppercase tracking-wider mb-1">Member Since</p>
+              <p className="text-stone-700">
+                {new Date(user.createdAt).toLocaleDateString('en-US', {
+                  month: 'long',
+                  year: 'numeric',
+                })}
+              </p>
+            </div>
+            <div>
+              <p className="text-stone-400 text-xs uppercase tracking-wider mb-1">Total Orders</p>
+              <p className="text-stone-700">{allOrders.length}</p>
+            </div>
+          </div>
+        </div>
+
+        {/* Order history */}
+        <div className="bg-white rounded-2xl border border-stone-100 shadow-sm overflow-hidden">
+          <div className="px-6 py-4 border-b border-stone-100">
+            <h2 className="font-medium text-stone-900">Order History</h2>
+          </div>
+
+          {allOrders.length === 0 ? (
+            <div className="text-center py-16 text-stone-400">
+              <p className="mb-4">No orders yet.</p>
+              <Link
+                href="/shop/coffee"
+                className="text-sm text-amber-700 hover:underline font-medium"
+              >
+                Shop our coffees →
+              </Link>
+            </div>
+          ) : (
+            <div className="divide-y divide-stone-100">
+              {allOrders.map((order) => (
+                <div key={order.id} className="px-6 py-5">
+                  <div className="flex items-start justify-between gap-4 mb-3">
+                    <div>
+                      <p className="text-xs text-stone-400 font-mono">{order.stripePaymentId}</p>
+                      <p className="text-sm text-stone-500 mt-0.5">
+                        {new Date(order.createdAt).toLocaleDateString('en-US', {
+                          year: 'numeric',
+                          month: 'long',
+                          day: 'numeric',
+                        })}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-3 flex-shrink-0">
+                      <span
+                        className={`text-[11px] font-semibold uppercase tracking-wider px-2.5 py-1 rounded-full ${
+                          STATUS_COLORS[order.status] ?? 'bg-stone-100 text-stone-600'
+                        }`}
+                      >
+                        {order.status}
+                      </span>
+                      <span className="font-semibold text-stone-900 text-sm">
+                        ${order.amount.toFixed(2)}
+                      </span>
+                    </div>
+                  </div>
+
+                  <ul className="space-y-1">
+                    {order.items.map((item) => (
+                      <li key={item.id} className="text-sm text-stone-600 flex items-center gap-2">
+                        <span className="w-1 h-1 rounded-full bg-stone-300 flex-shrink-0" />
+                        <span>{item.name}</span>
+                        {item.variant && (
+                          <span className="text-stone-400">— {item.variant}</span>
+                        )}
+                        <span className="text-stone-400 ml-auto">×{item.qty}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        <div className="mt-8 text-center">
+          <Link href="/shop/coffee" className="text-sm text-amber-700 hover:underline">
+            ← Back to Shop
+          </Link>
+        </div>
+      </div>
+    </div>
+  );
+}

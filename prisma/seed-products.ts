@@ -1,0 +1,611 @@
+import { PrismaClient } from '@prisma/client';
+
+const prisma = new PrismaClient();
+
+// Price tiers helper: pass per-lb price → returns { '½ lb', '1 lb', '1.5 lb', '2 lb' }
+function tiers(perLb: number) {
+  return {
+    '½ lb': Math.round(perLb * 0.5),
+    '1 lb': perLb,
+    '1.5 lb': Math.round(perLb * 1.5),
+    '2 lb': perLb * 2,
+  };
+}
+
+async function main() {
+  console.log('Seeding products and site content…');
+
+  // Remove old placeholder coffees that no longer exist in the real inventory
+  await prisma.product.deleteMany({
+    where: { slug: { in: ['c1', 'c2', 'c3', 'c4', 'c5', 'c6'] } },
+  });
+
+  // ── Coffees ────────────────────────────────────────────────
+  // Complete real inventory from Ryan McLaughlin — Coastal Granny's Collective
+
+  const coffees = [
+
+    // ── Named / Branded ───────────────────────────────────────
+
+    {
+      slug: 'disco-diva',
+      name: 'Disco Diva',
+      subtitle: 'Quindío, Colombia · Raspberry DCM',
+      origin: 'Quindío, Colombia',
+      region: 'Latin America',
+      process: 'Raspberry Double Carbonic Maceration',
+      elevation: '1,600–1,900m',
+      roast: 'Light',
+      notes: ['cherry cola', 'sangria', 'raspberry'],
+      prices: tiers(40),
+      price: tiers(40)['½ lb'],
+      gradient: 'linear-gradient(135deg,#5C3D10 0%,#9A6818 55%,#CC9818 100%)',
+      description: 'Fresh. Funky. Fabulous. This lot goes through double carbonic maceration with raspberry — a winemaking technique where CO2 creates an anaerobic environment that amplifies tropical fruit tones. Roasted light to preserve every wild aromatic. Expect bold cherry cola on the nose, sangria body, and a jammy raspberry finish.',
+      inStock: true, featured: true, position: 1,
+      roastOptions: ['Light', 'Light-Medium', 'Medium'],
+    },
+    {
+      slug: 'rodeo-queen',
+      name: 'Rodeo Queen',
+      subtitle: 'Colombia · Citrullus Co-Ferment',
+      origin: 'Colombia',
+      region: 'Latin America',
+      process: 'Citrullus Co-Ferment',
+      elevation: '1,400–1,800m',
+      roast: 'Medium',
+      notes: ['melon', 'jolly rancher', 'tropical', 'bright'],
+      prices: tiers(38),
+      price: tiers(38)['½ lb'],
+      gradient: 'linear-gradient(135deg,#3A4A28 0%,#6B7A4A 55%,#8A9660 100%)',
+      description: 'Wild. Zesty. Elegant. This citrullus co-ferment produces pure melon notes with a funky, jolly-rancher intensity that mellows into something bright and tropical. Bright and in-your-face at a lighter roast; smooth and velvety at medium. There is genuinely nothing else like it.',
+      inStock: true, featured: true, position: 2,
+      roastOptions: ['Light', 'Light-Medium', 'Medium'],
+    },
+
+    // ── Premium Single Origins ──────────────────────────────
+
+    {
+      slug: 'galaxy-hop-gesha',
+      name: 'Galaxy Hop Gesha',
+      subtitle: 'Colombia · Edwin Noreña · Galaxy Hop DCM',
+      origin: 'Colombia',
+      region: 'Latin America',
+      process: 'Galaxy Hop Double Carbonic Maceration',
+      elevation: '1,700–2,000m',
+      roast: 'Light',
+      notes: ['mango', 'pineapple', 'white tea', 'hops', 'ginger'],
+      prices: tiers(41),
+      price: tiers(41)['½ lb'],
+      gradient: 'linear-gradient(135deg,#8A4A4A 0%,#C47878 55%,#E0A8A0 100%)',
+      description: "From legendary Colombian producer Edwin Noreña — an award winner who sets the standard for experimental processing — this gesha varietal goes through double carbonic maceration with galaxy hops. Galaxy hops add tropical and fruity flavor; the double carbonic maceration amplifies that even further. Expect coriander, mango, pineapple, white tea, pine, juniper, ginger, and dank hop florals that evolve the longer it rests.",
+      inStock: true, featured: true, position: 4,
+      badge: 'Staff Pick', badgeClass: 'badge-gold',
+      roastOptions: ['Light', 'Light-Medium', 'Medium'],
+    },
+    {
+      slug: 'wush-wush',
+      name: 'Wush Wush',
+      subtitle: 'Ethiopia · Anaerobic Natural',
+      origin: 'Ethiopia',
+      region: 'Africa',
+      process: 'Anaerobic Natural',
+      elevation: '1,900–2,300m',
+      roast: 'Light',
+      notes: ['tropical fruit', 'florals', 'stone fruit'],
+      prices: tiers(34),
+      price: tiers(34)['½ lb'],
+      gradient: 'linear-gradient(135deg,#5C4A38 0%,#9A7A5A 55%,#C4A080 100%)',
+      description: "An extraordinarily rare Ethiopian variety — the fruitiness and florals are so pronounced it genuinely tastes like a co-ferment, even though it isn't. Notoriously challenging to roast due to variable bean sizes, but when dialed in it's transcendent. Peaks at 12 days post-roast. One of Ryan's all-time favorites.",
+      inStock: true, featured: false, position: 4,
+      badge: 'Staff Pick', badgeClass: 'badge-gold',
+      roastOptions: ['Light', 'Light-Medium', 'Medium'],
+    },
+    {
+      slug: 'hawaii-kona',
+      name: 'Hawaii Kona',
+      subtitle: 'Kona Coast, Hawaii · Washed',
+      origin: 'Kona Coast, Hawaii',
+      region: 'Pacific',
+      process: 'Washed',
+      elevation: '600–900m',
+      roast: 'Medium',
+      notes: ['chocolate', 'nutty', 'pineapple', 'florals'],
+      prices: tiers(45),
+      price: tiers(45)['½ lb'],
+      gradient: 'linear-gradient(135deg,#2A1808 0%,#5C3820 55%,#8B5830 100%)',
+      description: "One of the most prized coffees in the world, grown on the volcanic slopes of Hawaii's Kona Coast. A rich chocolate body gives way to warm nuttiness, delicate pineapple sweetness, and blossoming florals as the roast opens up. Best at 7–12 days post-roast when complexity is fully developed. Rare and only available when Ryan can source it.",
+      inStock: true, featured: false, position: 5,
+      badge: 'Limited', badgeClass: 'badge-red',
+      roastOptions: ['Light', 'Light-Medium', 'Medium', 'Medium-Dark'],
+    },
+    {
+      slug: 'maui-mokka',
+      name: 'Maui Mokka',
+      subtitle: 'Maui, Hawaii · Washed',
+      origin: 'Maui, Hawaii',
+      region: 'Pacific',
+      process: 'Washed',
+      elevation: '500–800m',
+      roast: 'Medium',
+      notes: ['dark chocolate', 'brown sugar', 'tropical'],
+      prices: tiers(48),
+      price: tiers(48)['½ lb'],
+      gradient: 'linear-gradient(135deg,#6A3A40 0%,#A87878 55%,#D4A8A0 100%)',
+      description: "Ryan's all-time favorite Hawaiian coffee — a tiny, rare Mokka variety with an intense, concentrated flavor profile unlike any other Hawaiian origin. Unfortunately unavailable since the 2023 Maui fires. Check back — Ryan is actively looking for a source.",
+      inStock: false, featured: false, position: 6,
+      roastOptions: ['Light', 'Medium', 'Medium-Dark'],
+    },
+
+    // ── Colombian Co-Ferments ───────────────────────────────
+
+    {
+      slug: 'cascade-hop-bourbon',
+      name: 'Cascade Hop Pink Bourbon',
+      subtitle: 'Colombia · Cascade Hop Co-Ferment',
+      origin: 'Colombia',
+      region: 'Latin America',
+      process: 'Cascade Hop Co-Ferment',
+      elevation: '1,600–1,900m',
+      roast: 'Light',
+      notes: ['citrus hops', 'stone fruit', 'floral', 'tropical'],
+      prices: tiers(41),
+      price: tiers(41)['½ lb'],
+      gradient: 'linear-gradient(135deg,#4A3820 0%,#7A5C30 55%,#A88048 100%)',
+      description: "Pink Bourbon is already one of the most sought-after Colombian varietals — add a cascade hop co-fermentation and you get something completely wild. Cascade hops bring a citrus-forward, resinous character that plays beautifully against the inherently fruity nature of Pink Bourbon. Best at a light roast where the aromatics are at their most expressive.",
+      inStock: true, featured: false, position: 7,
+      roastOptions: ['Light', 'Light-Medium', 'Medium'],
+    },
+    {
+      slug: 'colombia-peach',
+      name: 'Colombia Peach',
+      subtitle: 'Colombia · Peach Co-Ferment',
+      origin: 'Colombia',
+      region: 'Latin America',
+      process: 'Peach Co-Ferment',
+      elevation: '1,500–1,800m',
+      roast: 'Light',
+      notes: ['peach', 'velvety', 'sweet', 'stone fruit'],
+      prices: tiers(40),
+      price: tiers(40)['½ lb'],
+      gradient: 'linear-gradient(135deg,#2A3820 0%,#4A6030 55%,#6B8A48 100%)',
+      description: "A more approachable co-ferment than Ryan's wilder offerings — the peach co-fermentation adds sweet, velvety stone fruit character without going too funky. Clean, bright, and beautifully balanced. A great entry point into experimental Colombian processing.",
+      inStock: true, featured: false, position: 8,
+      roastOptions: ['Light', 'Light-Medium', 'Medium'],
+    },
+    {
+      slug: 'colombia-papaya',
+      name: 'Colombia Papaya',
+      subtitle: 'Colombia · Papaya Co-Ferment',
+      origin: 'Colombia',
+      region: 'Latin America',
+      process: 'Papaya Co-Ferment',
+      elevation: '1,500–1,900m',
+      roast: 'Light',
+      notes: ['papaya', 'tropical', 'sweet', 'smooth'],
+      prices: tiers(36),
+      price: tiers(36)['½ lb'],
+      gradient: 'linear-gradient(135deg,#5C3D10 0%,#9A6818 55%,#CC9818 100%)',
+      description: "A mild co-ferment that lets the papaya fruit do the talking — sweet tropical notes with a smooth, clean body. Great for drip and pour-over brewing where the nuanced fruit character can fully develop.",
+      inStock: true, featured: false, position: 9,
+      roastOptions: ['Light', 'Light-Medium', 'Medium'],
+    },
+    {
+      slug: 'colombia-coconut-mango',
+      name: 'Colombia Coconut Mango',
+      subtitle: 'Colombia · Coconut Mango Co-Ferment',
+      origin: 'Colombia',
+      region: 'Latin America',
+      process: 'Coconut Mango Co-Ferment',
+      elevation: '1,500–1,900m',
+      roast: 'Light',
+      notes: ['coconut', 'mango', 'tropical', 'creamy'],
+      prices: tiers(38),
+      price: tiers(38)['½ lb'],
+      gradient: 'linear-gradient(135deg,#3A4A28 0%,#6B7A4A 55%,#8A9660 100%)',
+      description: "Right between mild and wild — this co-ferment blends the creamy richness of coconut with the bright sweetness of mango for a tropical one-two punch. Smooth and satisfying across a range of roast levels.",
+      inStock: true, featured: false, position: 10,
+      roastOptions: ['Light', 'Light-Medium', 'Medium'],
+    },
+    {
+      slug: 'colombia-mango',
+      name: 'Colombia Mango',
+      subtitle: 'Colombia · Mango Co-Ferment',
+      origin: 'Colombia',
+      region: 'Latin America',
+      process: 'Mango Co-Ferment',
+      elevation: '1,500–1,900m',
+      roast: 'Light',
+      notes: ['mango', 'tropical', 'bright', 'sweet'],
+      prices: tiers(36),
+      price: tiers(36)['½ lb'],
+      gradient: 'linear-gradient(135deg,#8A4A4A 0%,#C47878 55%,#E0A8A0 100%)',
+      description: "A mild and approachable mango co-ferment with straightforward bright tropical sweetness. The mango character is clear and clean — great for everyday brewing when you want something a little special without going completely off the deep end.",
+      inStock: true, featured: false, position: 11,
+      roastOptions: ['Light', 'Light-Medium', 'Medium'],
+    },
+    {
+      slug: 'colombia-rose-strawberry-lychee',
+      name: 'Rose · Strawberry · Lychee',
+      subtitle: 'Colombia · Floral Trio Co-Ferment',
+      origin: 'Colombia',
+      region: 'Latin America',
+      process: 'Rose Petal, Strawberry & Lychee Co-Ferment',
+      elevation: '1,600–1,900m',
+      roast: 'Light',
+      notes: ['rose', 'strawberry', 'lychee', 'floral'],
+      prices: tiers(38),
+      price: tiers(38)['½ lb'],
+      gradient: 'linear-gradient(135deg,#5C4A38 0%,#9A7A5A 55%,#C4A080 100%)',
+      description: "Three co-ferment ingredients in one lot — rose petals, strawberry, and lychee. The result is delicate and layered, leaning floral and fruity without overwhelming. A mild co-ferment that's as elegant as it sounds.",
+      inStock: true, featured: false, position: 12,
+      roastOptions: ['Light', 'Light-Medium', 'Medium'],
+    },
+    {
+      slug: 'colombia-watermelon',
+      name: 'Colombia Watermelon',
+      subtitle: 'Colombia · Watermelon Co-Ferment',
+      origin: 'Colombia',
+      region: 'Latin America',
+      process: 'Watermelon Co-Ferment',
+      elevation: '1,500–1,900m',
+      roast: 'Light',
+      notes: ['watermelon', 'candy', 'bright', 'juicy'],
+      prices: tiers(40),
+      price: tiers(40)['½ lb'],
+      gradient: 'linear-gradient(135deg,#2A1808 0%,#5C3820 55%,#8B5830 100%)',
+      description: "One of Ryan's wilder co-ferments — the watermelon co-fermentation produces a bright, candy-like sweetness that's genuinely surprising in a cup of coffee. Fun, playful, and totally unique. A crowd-pleaser at coffee events.",
+      inStock: true, featured: false, position: 13,
+      roastOptions: ['Light', 'Light-Medium', 'Medium'],
+    },
+    {
+      slug: 'colombia-passion-fruit',
+      name: 'Colombia Passion Fruit',
+      subtitle: 'Colombia · Passion Fruit Co-Ferment',
+      origin: 'Colombia',
+      region: 'Latin America',
+      process: 'Passion Fruit Co-Ferment',
+      elevation: '1,500–1,900m',
+      roast: 'Light',
+      notes: ['passion fruit', 'tart', 'tropical', 'exotic'],
+      prices: tiers(40),
+      price: tiers(40)['½ lb'],
+      gradient: 'linear-gradient(135deg,#6A3A40 0%,#A87878 55%,#D4A8A0 100%)',
+      description: "A wild co-ferment that delivers the unmistakable tart, exotic sweetness of passion fruit in every cup. The intensity is there — this one doesn't hide. Best at a light roast to keep all that tropical brightness fully intact.",
+      inStock: true, featured: false, position: 14,
+      roastOptions: ['Light', 'Light-Medium', 'Medium'],
+    },
+
+    // ── African Origins ─────────────────────────────────────
+
+    {
+      slug: 'ethiopia-yirgacheffe-natural',
+      name: 'Ethiopia Yirgacheffe Natural',
+      subtitle: 'Yirgacheffe, Ethiopia · Natural Process',
+      origin: 'Yirgacheffe, Ethiopia',
+      region: 'Africa',
+      process: 'Natural',
+      elevation: '1,800–2,200m',
+      roast: 'Light',
+      notes: ['citrus', 'red fruit', 'chocolate', 'black tea'],
+      prices: tiers(28),
+      price: tiers(28)['½ lb'],
+      gradient: 'linear-gradient(135deg,#4A3820 0%,#7A5C30 55%,#A88048 100%)',
+      description: "A naturally processed Yirgacheffe with a gentler flavor profile compared to the more experimental co-ferments — citrusy brightness, a hint of red fruit, Mexican chocolate undertones, and a clean black tea finish. Not nearly as wild as Ryan's co-ferment offerings, but beautifully approachable.",
+      inStock: true, featured: false, position: 15,
+      roastOptions: ['Light', 'Light-Medium', 'Medium'],
+    },
+    {
+      slug: 'haitian-red-honey',
+      name: 'Chocolate Chica',
+      subtitle: 'Haiti · Red Honey Process',
+      origin: 'Haiti',
+      region: 'Caribbean',
+      process: 'Red Honey',
+      elevation: '800–1,200m',
+      roast: 'Medium-Dark',
+      notes: ['baker\'s chocolate', 'floral', 'sweet', 'caramel'],
+      prices: tiers(29),
+      price: tiers(29)['½ lb'],
+      gradient: 'linear-gradient(135deg,#2A3820 0%,#4A6030 55%,#6B8A48 100%)',
+      description: "Honey processing leaves mucilage on the bean during drying, adding sweetness and body you can't get from washed coffees. Haiti's red honey process produces a beautiful baker's chocolate base, sweet floral notes, and a caramel richness that works especially well at medium-dark. Great in a French press or moka pot.",
+      inStock: true, featured: true, position: 3,
+      roastOptions: ['Medium', 'Medium-Dark', 'Dark'],
+    },
+
+    // ── Asian / Pacific Islands ──────────────────────────────
+
+    {
+      slug: 'bali-blue-moon',
+      name: 'Bali Blue Moon',
+      subtitle: 'Bali, Indonesia · Giling Basah',
+      origin: 'Bali, Indonesia',
+      region: 'Asia Pacific',
+      process: 'Giling Basah (Wet-Hulled)',
+      elevation: '900–1,400m',
+      roast: 'Medium',
+      notes: ['nuttiness', 'vanilla', 'baking spices', 'chocolate'],
+      prices: tiers(22),
+      price: tiers(22)['½ lb'],
+      gradient: 'linear-gradient(135deg,#5C3D10 0%,#9A6818 55%,#CC9818 100%)',
+      description: "The classic Indonesian giling basah (wet-hulling) process gives green beans a distinctive blue hue — hence the name. The result is a thick, satisfying body with warming vanilla notes, baking spice complexity, and a clean chocolatey finish. An approachable crowd-pleaser that works beautifully in drip, French press, or espresso.",
+      inStock: true, featured: false, position: 17,
+      roastOptions: ['Light-Medium', 'Medium', 'Medium-Dark'],
+    },
+    {
+      slug: 'bali-natural',
+      name: 'Bali Natural Mokka/Java',
+      subtitle: 'Bali, Indonesia · Natural Process',
+      origin: 'Bali, Indonesia',
+      region: 'Asia Pacific',
+      process: 'Natural',
+      elevation: '900–1,400m',
+      roast: 'Medium',
+      notes: ['winey', 'dark fruit', 'chocolate', 'baking spices'],
+      prices: tiers(24),
+      price: tiers(24)['½ lb'],
+      gradient: 'linear-gradient(135deg,#3A4A28 0%,#6B7A4A 55%,#8A9660 100%)',
+      description: "A Mokka/Java clone varietal processed naturally — totally different character at different roast levels. Light roast: wild, winey, earthy, and unexpected. Medium to dark: rich chocolatey depth, dark fruit undertones, and warming baking spice complexity. Ryan recommends medium to medium-dark for most brewing methods.",
+      inStock: true, featured: false, position: 18,
+      roastOptions: ['Light', 'Medium', 'Medium-Dark', 'Dark'],
+    },
+    {
+      slug: 'sumatra-gayo-5yr',
+      name: 'Sumatra Gayo — 5 Year Aged',
+      subtitle: 'Gayo Highlands, Sumatra · Aged in Spice Bags',
+      origin: 'Gayo Highlands, Sumatra',
+      region: 'Asia Pacific',
+      process: 'Wet-Hulled, Aged 5 Years in Spice Bags',
+      elevation: '1,200–1,600m',
+      roast: 'Medium-Dark',
+      notes: ['toasted marshmallow', 'oak', 'peat', 'baking spices'],
+      prices: tiers(28),
+      price: tiers(28)['½ lb'],
+      gradient: 'linear-gradient(135deg,#8A4A4A 0%,#C47878 55%,#E0A8A0 100%)',
+      description: "Green coffee aged for 5 years in spice bags — a centuries-old technique rarely done with specialty coffee anymore. The aging creates a thick, syrupy body and an extraordinary depth of flavor: toasted marshmallow sweetness, whiskey-like oak, earthy peat, and warming baking spices. Ready to drink immediately — this one needs no resting time.",
+      inStock: true, featured: false, position: 19,
+      roastOptions: ['Medium', 'Medium-Dark', 'Dark'],
+    },
+    {
+      slug: 'vietnam-arabica',
+      name: 'Vietnam Arabica',
+      subtitle: 'Vietnam · 100% Arabica',
+      origin: 'Vietnam',
+      region: 'Asia Pacific',
+      process: 'Natural',
+      elevation: '1,000–1,500m',
+      roast: 'Medium',
+      notes: ['smooth', 'complex', 'bright', 'tropical'],
+      prices: tiers(27),
+      price: tiers(27)['½ lb'],
+      gradient: 'linear-gradient(135deg,#5C4A38 0%,#9A7A5A 55%,#C4A080 100%)',
+      description: "Vietnam is known almost exclusively for robusta production — which makes this 100% arabica lot genuinely rare. Ryan had to search to find it. A smooth, complex cup that defies expectations. If you think you know what Vietnamese coffee tastes like, this will change your mind.",
+      inStock: true, featured: false, position: 20,
+      roastOptions: ['Light-Medium', 'Medium', 'Medium-Dark'],
+    },
+    {
+      slug: 'china-yunnan',
+      name: 'China Yunnan',
+      subtitle: 'Lao Xu Zhai, Yunnan, China · Natural',
+      origin: 'Lao Xu Zhai, Yunnan, China',
+      region: 'Asia Pacific',
+      process: 'Natural',
+      elevation: '1,400–1,800m',
+      roast: 'Medium',
+      notes: ['winey', 'fruity', 'baking spices', 'wild'],
+      prices: tiers(30),
+      price: tiers(30)['½ lb'],
+      gradient: 'linear-gradient(135deg,#2A1808 0%,#5C3820 55%,#8B5830 100%)',
+      description: "Specialty coffee from China is exceptionally rare — most Chinese production is commodity-grade. This natural lot from the Lao Xu Zhai village in Yunnan is super winey and fruity with bold baking spices. Wild and in-your-face, it is not for every palate — but for the adventurous, it is a fascinating cup that proves China's specialty potential.",
+      inStock: true, featured: false, position: 21,
+      roastOptions: ['Medium', 'Medium-Dark'],
+    },
+    {
+      slug: 'png-peaberry',
+      name: 'Papua New Guinea Peaberry',
+      subtitle: 'Highland Provinces, PNG · Washed · Small Holders',
+      origin: 'Highland Provinces, Papua New Guinea',
+      region: 'Asia Pacific',
+      process: 'Washed',
+      elevation: '1,400–1,800m',
+      roast: 'Light',
+      notes: ['mexican chocolate', 'full body', 'nutty', 'melon'],
+      prices: tiers(27),
+      price: tiers(27)['½ lb'],
+      gradient: 'linear-gradient(135deg,#6A3A40 0%,#A87878 55%,#D4A8A0 100%)',
+      description: "Peaberry beans — where the coffee cherry produces a single round bean instead of the usual two flat-sided halves — are prized for their concentrated flavor. This small-holder lot from PNG's highlands delivers Mexican chocolate vibes, full body, and good nutty character. At a lighter roast, subtle melon notes emerge.",
+      inStock: true, featured: false, position: 22,
+      roastOptions: ['Light', 'Light-Medium', 'Medium'],
+    },
+    {
+      slug: 'india-mysore',
+      name: 'India Mysore Nuggets',
+      subtitle: 'Mysore, Karnataka, India · Washed',
+      origin: 'Mysore, Karnataka, India',
+      region: 'Asia Pacific',
+      process: 'Washed',
+      elevation: '1,000–1,500m',
+      roast: 'Dark',
+      notes: ['bold', 'nutty', 'spicy', 'smoky'],
+      prices: tiers(27),
+      price: tiers(27)['½ lb'],
+      gradient: 'linear-gradient(135deg,#4A3820 0%,#7A5C30 55%,#A88048 100%)',
+      description: "A bold, assertive Indian washed coffee that earns its name — \"Mysore Nuggets\" refers to the large, dense bean size. Ryan specifically recommends not going lighter than medium on this one. At medium-dark to dark, it delivers intense nuttiness, warming spice, a pronounced smokiness, and a long, satisfying finish. Excellent for espresso.",
+      inStock: true, featured: false, position: 23,
+      roastOptions: ['Medium', 'Medium-Dark', 'Dark'],
+    },
+
+    // ── The Americas ─────────────────────────────────────────
+
+    {
+      slug: 'costa-rica-natural',
+      name: 'Costa Rica Natural',
+      subtitle: 'Costa Rica · Natural Process',
+      origin: 'Costa Rica',
+      region: 'Central America',
+      process: 'Natural',
+      elevation: '1,200–1,800m',
+      roast: 'Medium',
+      notes: ['stone fruit', 'caramel', 'balanced', 'clean'],
+      prices: tiers(26),
+      price: tiers(26)['½ lb'],
+      gradient: 'linear-gradient(135deg,#2A3820 0%,#4A6030 55%,#6B8A48 100%)',
+      description: "Costa Rica is beloved for its consistent, balanced specialty coffee — and this natural lot adds fruit-forward complexity to that clean foundation. Naturally processed coffees from CR are relatively uncommon, making this a nice find. A crowd-pleaser that sits comfortably between approachable and interesting.",
+      inStock: true, featured: false, position: 24,
+      roastOptions: ['Light', 'Light-Medium', 'Medium', 'Medium-Dark'],
+    },
+  ];
+
+  for (const coffee of coffees) {
+    const { prices, roastOptions, ...rest } = coffee as typeof coffee & { roastOptions: string[] };
+    await prisma.product.upsert({
+      where: { slug: coffee.slug },
+      update: { ...rest, prices: prices as object, type: 'coffee', features: [], options: roastOptions },
+      create: { ...rest, prices: prices as object, type: 'coffee', features: [], options: roastOptions },
+    });
+  }
+  console.log(`  ✓ ${coffees.length} coffees`);
+
+  // ── Subscriptions ──────────────────────────────────────────
+
+  const subscriptions = [
+    {
+      slug: 's1', name: 'The Curious Granny', freq: 'Bi-weekly delivery', price: 18, period: '/delivery',
+      description: 'A rotating selection of light and medium roasts, curated fresh each delivery. Great for the everyday coffee lover who wants to explore without going too far down the experimental rabbit hole.',
+      features: ['12 oz bag every 2 weeks', 'Roast notes card included', 'Free shipping always', 'Pause or cancel anytime'],
+      gradient: 'linear-gradient(135deg,#5C3D10 0%,#9A6818 55%,#CC9818 100%)',
+      badge: 'Most Popular', position: 1,
+    },
+    {
+      slug: 's2', name: 'The Collector', freq: 'Monthly delivery', price: 55, period: '/month',
+      description: "Ryan's premium subscription featuring his most exciting finds — rare varieties, experimental co-ferments, and first access to limited lots. For the enthusiast who always wants the most interesting cup.",
+      features: ['Two 12 oz bags monthly', 'First access to rare and limited lots', 'Detailed origin & process notes', 'Member discount on all shop orders', 'Free shipping always', 'Pause or cancel anytime'],
+      gradient: 'linear-gradient(135deg,#3A4A28 0%,#6B7A4A 55%,#8A9660 100%)',
+      badge: 'Best Value', position: 2,
+    },
+    {
+      slug: 's3', name: 'The Collective Stash', freq: 'Weekly delivery', price: 68, period: '/week',
+      description: "Keep the whole team caffeinated. A generous weekly delivery of Ryan's most popular roasts — perfect for offices and high-consumption households that go through coffee fast.",
+      features: ['5 lb bag every week', 'Choose your roast level', 'Priority roasting support', 'Free shipping always', 'Flexible scheduling'],
+      gradient: 'linear-gradient(135deg,#8A4A4A 0%,#C47878 55%,#E0A8A0 100%)',
+      badge: null, position: 3,
+      roastOptions: ['Light', 'Medium', 'Medium-Dark', 'Dark'],
+    },
+  ];
+
+  for (const sub of subscriptions) {
+    const { roastOptions, ...rest } = sub as typeof sub & { roastOptions?: string[] };
+    await prisma.product.upsert({
+      where: { slug: rest.slug },
+      update: { ...rest, type: 'subscription', notes: [], options: roastOptions ?? [] },
+      create: { ...rest, type: 'subscription', notes: [], options: roastOptions ?? [] },
+    });
+  }
+  console.log('  ✓ 3 subscriptions');
+
+  // ── Merch ──────────────────────────────────────────────────
+
+  const merch = [
+    {
+      slug: 'm1', name: 'Canvas Tote', icon: '👜', price: 28,
+      description: "Heavy-duty cotton canvas with the Coastal Granny's logo. The perfect bag for hauling your weekly coffee haul — and everything else.",
+      options: ['Natural', 'Black'],
+      gradient: 'linear-gradient(135deg,#5C4A38 0%,#9A7A5A 55%,#C4A080 100%)',
+      position: 1,
+    },
+    {
+      slug: 'm2', name: 'Ceramic Mug', icon: '🍵', price: 42,
+      description: 'Hand-thrown stoneware mug, 12 oz. Each piece is uniquely yours. Microwave and dishwasher safe. Holds up beautifully.',
+      options: ['Cream', 'Charcoal'],
+      gradient: 'linear-gradient(135deg,#2A1808 0%,#5C3820 55%,#8B5830 100%)',
+      position: 2,
+    },
+    {
+      slug: 'm3', name: 'Pour-Over Starter Kit', icon: '🫗', price: 65,
+      description: 'Everything you need for your first (or hundredth) great pour-over: V60 dripper, 50 filters, gooseneck kettle guide, and our recipe card.',
+      options: [],
+      gradient: 'linear-gradient(135deg,#6A3A40 0%,#A87878 55%,#D4A8A0 100%)',
+      position: 3,
+    },
+    {
+      slug: 'm4', name: 'Origin T-Shirt', icon: '👕', price: 38,
+      description: "Soft organic cotton tee featuring the Coastal Granny's origin map graphic across the back. Minimal chest logo. Relaxed fit. You will live in this.",
+      options: ['XS', 'S', 'M', 'L', 'XL', 'XXL'],
+      gradient: 'linear-gradient(135deg,#4A3820 0%,#7A5C30 55%,#A88048 100%)',
+      position: 4,
+    },
+  ];
+
+  for (const item of merch) {
+    await prisma.product.upsert({
+      where: { slug: item.slug },
+      update: { ...item, type: 'merch', notes: [], features: [] },
+      create: { ...item, type: 'merch', notes: [], features: [] },
+    });
+  }
+  console.log('  ✓ 4 merch items');
+
+  // ── Site Content ───────────────────────────────────────────
+
+  const contents: Array<{ page: string; key: string; value: string }> = [
+    { page: 'home', key: 'hero_title', value: 'Your Local Micro-Roaster' },
+    { page: 'home', key: 'hero_subtitle', value: "Hand-roasted specialty coffee from an Aillio Bullet drum roaster to your door. Wild co-ferments, rare single-origins, and everything in between — roasted on demand in San Diego, CA." },
+    { page: 'home', key: 'featured_eyebrow', value: 'Current Roasts' },
+    { page: 'home', key: 'featured_heading', value: "What's in the Drum" },
+    { page: 'home', key: 'featured_body', value: "Every lot is roasted fresh by Ryan — experimental co-ferments, rare single-origins, and seasonal favorites you won't find anywhere else." },
+    { page: 'home', key: 'sub_heading', value: 'Never Run Out of Good Coffee' },
+    { page: 'home', key: 'sub_body', value: 'Fresh roasts delivered on your schedule. Each delivery is hand-selected and roasted to order by Ryan.' },
+    { page: 'home', key: 'story_eyebrow', value: 'San Diego, CA' },
+    { page: 'home', key: 'story_heading', value: 'Born from Curiosity' },
+    { page: 'home', key: 'story_body', value: "Ryan started roasting on a barbecue in the backyard. Kelly started a coffee cart in San Diego. Together they built Coastal Granny's Collective — where wild processing techniques meet genuine community, one roast at a time." },
+    { page: 'about', key: 'hero_title', value: "About Coastal Granny's" },
+    { page: 'about', key: 'hero_subtitle', value: "A husband-and-wife micro-roasting project born from curiosity, community, and a love of the wildest coffees in the world." },
+    { page: 'about', key: 'story_heading', value: 'How It Started' },
+    { page: 'about', key: 'story_body_1', value: "Ryan started roasting on a barbecue in the backyard — just him, a bag of green beans, and a stubborn curiosity about what makes great coffee tick. What began as a way to access interesting lots (the rare ones always come in 22 lb minimum shipments) turned into something he couldn't stop. He worked his way up to an Aillio Bullet drum roaster, took a masterclass with Scott Rao, and built direct relationships with legendary producers like Edwin Noreña." },
+    { page: 'about', key: 'story_body_2', value: "Then Kelly leaned in. She launched Coastal Granny's as a coffee, matcha, and dessert cart — doing pop-ups and private experiences all around San Diego — and Ryan became her roaster. Now it's a duo: Ryan hunts down experimental lots and roasts them with precision. Kelly brings them to the community through events, pop-ups, and private tastings. Every bag you open tells a story." },
+    { page: 'about', key: 'values', value: JSON.stringify([
+      { icon: 'bean', title: 'Roasted to Order', text: "Every batch is pulled from Ryan's Aillio Bullet drum roaster fresh — no warehouse stock, no stale beans." },
+      { icon: 'flask', title: 'Experimental Processing', text: 'We specialize in co-ferments, carbonic macerations, and rare processing techniques that push flavor to its limit.' },
+      { icon: 'leaf', title: 'Traceable Origins', text: 'We source from producers we know by name. When Ryan loves a lot, he tells you exactly who grew it and why.' },
+      { icon: 'flower', title: 'Community First', text: 'Pop-ups, private tastings, and local events across San Diego. Coffee this good is meant to be shared.' },
+    ]) },
+    { page: 'about', key: 'team', value: JSON.stringify([
+      { avatar: '🫘', name: 'Ryan McLaughlin', role: 'Micro-Roaster & Green Buyer' },
+      { avatar: '🌼', name: 'Kelly McLaughlin', role: 'Brand, Events & Pop-Ups' },
+    ]) },
+    { page: 'contact', key: 'heading', value: 'Find Your Local Roaster' },
+    { page: 'contact', key: 'subheading', value: "San Diego-based micro-roasting by appointment. Ryan roasts on demand — reach out to place an order or catch Kelly and the cart at upcoming pop-ups around SD." },
+    { page: 'contact', key: 'address', value: 'San Diego, CA 92104' },
+    { page: 'contact', key: 'hours', value: 'By appointment — roasted fresh to order' },
+    { page: 'contact', key: 'email', value: 'coastalgrannys@gmail.com' },
+    { page: 'contact', key: 'phone', value: '' },
+    { page: 'wholesale', key: 'hero_title', value: 'Wholesale & Partnerships' },
+    { page: 'wholesale', key: 'hero_subtitle', value: "Interested in serving Coastal Granny's coffee at your café, event, or pop-up? Let's talk." },
+    { page: 'wholesale', key: 'why_heading', value: 'Why Partner With Us' },
+    { page: 'wholesale', key: 'why_body_1', value: "Ryan roasts every batch to order on an Aillio Bullet drum roaster — meaning your guests get fresh, complex coffee that larger roasters can't match. We specialize in experimental processing techniques and rare single-origins that give your menu a genuine point of difference." },
+    { page: 'wholesale', key: 'why_body_2', value: "We work with cafés, event organizers, and private clients across San Diego. Whether you need a signature house blend, a rotating seasonal selection, or specialty lots for a one-off event, we can deliver." },
+    { page: 'wholesale', key: 'perks', value: JSON.stringify(["Flexible minimum orders", "Custom roast profiles for your brew method", "Seasonal and limited-lot exclusives", "Direct line to the roaster — no middleman", "Pop-up collaboration opportunities with Kelly"]) },
+    { page: 'wholesale', key: 'form_heading', value: 'Request a Sample Kit' },
+    { page: 'gift-cards', key: 'heading', value: 'E-Gift Cards' },
+    { page: 'gift-cards', key: 'subheading', value: "Give the gift of something they've never tasted. Coastal Granny's gift cards can be used on any coffee, subscription, or merch." },
+    { page: 'gift-cards', key: 'amounts', value: JSON.stringify([25, 40, 60, 80, 100, 150]) },
+    { page: 'gift-cards', key: 'custom_heading', value: 'Choose a Custom Amount' },
+    { page: 'gift-cards', key: 'custom_body', value: 'Enter any amount between $10 and $500.' },
+    { page: 'gift-cards', key: 'custom_min', value: '10' },
+    { page: 'gift-cards', key: 'custom_max', value: '500' },
+  ];
+
+  for (const c of contents) {
+    await prisma.siteContent.upsert({
+      where: { page_key: { page: c.page, key: c.key } },
+      update: { value: c.value },
+      create: c,
+    });
+  }
+  console.log('  ✓ site content');
+
+  console.log('Done.');
+}
+
+main()
+  .catch((e) => { console.error(e); process.exit(1); })
+  .finally(() => prisma.$disconnect());

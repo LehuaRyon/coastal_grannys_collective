@@ -1,0 +1,354 @@
+"use client"
+
+import { useState } from "react"
+import { FlowerIcon, InstagramLogoIcon, SparkleIcon } from '@phosphor-icons/react'
+import { Button } from "@/components/ui/Button"
+
+const EVENT_TYPES = [
+  "Private Gathering",
+  "Birthday Party",
+  "Bridal / Baby Shower",
+  "Wedding",
+  "Corporate Event",
+  "Pop-Up Coffee Bar",
+  "Farmers Market",
+  "Other",
+]
+
+const START_TIMES = [
+  "Morning (7am – 11am)",
+  "Midday (11am – 2pm)",
+  "Afternoon (2pm – 5pm)",
+  "Evening (5pm – 9pm)",
+  "Flexible",
+]
+
+const HOW_FOUND = [
+  "Instagram",
+  "Word of Mouth",
+  "Google",
+  "Facebook Marketplace",
+  "Friend or Family",
+  "Other",
+]
+
+export function CoffeeCartClient() {
+  const [submitted, setSubmitted] = useState(false)
+  const [form, setForm] = useState({
+    firstName: "",
+    lastName: "",
+    email: "",
+    phone: "",
+    eventDate: "",
+    startTime: "",
+    guestCount: "",
+    eventType: "",
+    occasion: "",
+    flexible: "",
+    howFound: "",
+    details: "",
+  })
+
+  function set(key: keyof typeof form, value: string) {
+    setForm((f) => ({ ...f, [key]: value }))
+  }
+
+  function handleSubmit(e: React.FormEvent) {
+    e.preventDefault()
+    const body = [
+      `Name: ${form.firstName} ${form.lastName}`,
+      `Email: ${form.email}`,
+      `Phone: ${form.phone}`,
+      `Event Date: ${form.eventDate}`,
+      `Start Time: ${form.startTime}`,
+      `Estimated Guests: ${form.guestCount}`,
+      `Event Type: ${form.eventType}`,
+      `Occasion: ${form.occasion}`,
+      `Date Flexible: ${form.flexible}`,
+      `How They Found Us: ${form.howFound}`,
+      `Details: ${form.details}`,
+    ].join("\n")
+
+    // TODO: POST form data to /api/submissions with type: 'CART' so it appears
+    // in the admin dashboard Submissions tab. See TODO in app/admin/page.tsx.
+    const mailto = `mailto:coastalgrannys@gmail.com?subject=${encodeURIComponent(`Cart Inquiry — ${form.firstName} ${form.lastName}`)}&body=${encodeURIComponent(body)}`
+    window.location.href = mailto
+    setSubmitted(true)
+  }
+
+  if (submitted) {
+    return (
+      <div className="text-center py-24 px-4">
+        <FlowerIcon size={48} weight="duotone" color="#C8921A" className="mb-4" />
+        <h2 className="font-serif text-3xl text-stone-900 mb-3">We got it!</h2>
+        <p className="text-stone-500 max-w-sm mx-auto text-sm leading-relaxed">
+          Your inquiry has been sent to Kelly. She&apos;ll be in touch within 48
+          hours to talk through the details.
+        </p>
+        <button
+          onClick={() => setSubmitted(false)}
+          className="mt-8 text-sm text-amber-700 hover:underline"
+        >
+          Send another inquiry
+        </button>
+      </div>
+    )
+  }
+
+  return (
+    <section className="max-w-7xl mx-auto px-4 sm:px-6 py-16" id="inquiry">
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-12 items-start">
+        {/* Left — copy */}
+        <div>
+          <p className="text-xs font-semibold text-amber-700 uppercase tracking-widest mb-3">
+            Book the Cart
+          </p>
+          <h2 className="font-serif text-4xl text-stone-900 mb-5 leading-tight">
+            Get the Party Started
+          </h2>
+          <p className="text-stone-500 text-sm leading-relaxed mb-6">
+            Fill out the form and Kelly will get back to you within 48 hours to
+            talk through your event vision, availability, and pricing.
+          </p>
+          <ul className="space-y-5">
+            {[
+              "Pop-ups & private gatherings",
+              "Birthdays, showers & weddings",
+              "Corporate events & team experiences",
+              "Custom coffee & matcha menus",
+              "All around San Diego & surrounding areas",
+            ].map((item) => (
+              <li key={item} className="flex items-start gap-4">
+                <span className="w-8 flex-shrink-0 mt-0.5">
+                  <SparkleIcon size={20} weight="duotone" color="#C8921A" />
+                </span>
+                <p className="text-sm text-stone-700">{item}</p>
+              </li>
+            ))}
+          </ul>
+          <div className="mt-8 p-4 bg-stone-100 rounded-2xl border border-stone-200">
+            <p className="text-xs text-stone-400 mb-3 font-medium uppercase tracking-wider">
+              Follow along for pop-up dates and drop announcements
+            </p>
+            <a
+              href="https://www.instagram.com/coastalgrannys/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-2 text-sm font-semibold text-stone-900 hover:text-amber-700 transition-colors"
+            >
+              <InstagramLogoIcon size={16} weight="duotone" />
+              @coastalgrannys
+            </a>
+          </div>
+        </div>
+
+        {/* Right — form */}
+        <div className="lg:col-span-3 relative rounded-2xl shadow-sm overflow-hidden p-8" style={{ backgroundColor: '#F5EFE6' }}>
+          <div className="absolute inset-0 bg-cover bg-no-repeat" style={{ backgroundImage: 'url(/images/cart-form-bg.png)', backgroundPosition: 'center center' }} />
+          <div className="relative bg-white/80 rounded-xl p-6 backdrop-blur-[2px] mx-14 my-16">
+            <h3 className="font-serif text-2xl text-stone-900 mb-6">Inquire</h3>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          {/* Name */}
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-xs font-medium text-stone-600 mb-1.5">
+                First Name *
+              </label>
+              <input
+                required
+                value={form.firstName}
+                onChange={(e) => set("firstName", e.target.value)}
+                className="w-full border border-stone-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-amber-400 transition-colors bg-white"
+                placeholder="Jasmine"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-stone-600 mb-1.5">
+                Last Name *
+              </label>
+              <input
+                required
+                value={form.lastName}
+                onChange={(e) => set("lastName", e.target.value)}
+                className="w-full border border-stone-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-amber-400 transition-colors bg-white"
+                placeholder="Ryon"
+              />
+            </div>
+          </div>
+
+          {/* Contact */}
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-xs font-medium text-stone-600 mb-1.5">
+                Email *
+              </label>
+              <input
+                required
+                type="email"
+                value={form.email}
+                onChange={(e) => set("email", e.target.value)}
+                className="w-full border border-stone-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-amber-400 transition-colors bg-white"
+                placeholder="you@example.com"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-stone-600 mb-1.5">
+                Phone
+              </label>
+              <input
+                type="tel"
+                value={form.phone}
+                onChange={(e) => set("phone", e.target.value)}
+                className="w-full border border-stone-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-amber-400 transition-colors bg-white"
+                placeholder="(619) 555-0100"
+              />
+            </div>
+          </div>
+
+          {/* Date + time */}
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-xs font-medium text-stone-600 mb-1.5">
+                Desired Event Date *
+              </label>
+              <input
+                required
+                type="date"
+                value={form.eventDate}
+                onChange={(e) => set("eventDate", e.target.value)}
+                className="w-full border border-stone-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-amber-400 transition-colors bg-white"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-stone-600 mb-1.5">
+                Start Time *
+              </label>
+              <select
+                required
+                value={form.startTime}
+                onChange={(e) => set("startTime", e.target.value)}
+                className="w-full border border-stone-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-amber-400 transition-colors bg-white"
+              >
+                <option value="">Select a time</option>
+                {START_TIMES.map((t) => (
+                  <option key={t} value={t}>
+                    {t}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          {/* Guests + event type */}
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-xs font-medium text-stone-600 mb-1.5">
+                Estimated Guest Count *
+              </label>
+              <input
+                required
+                type="number"
+                min="1"
+                value={form.guestCount}
+                onChange={(e) => set("guestCount", e.target.value)}
+                className="w-full border border-stone-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-amber-400 transition-colors bg-white"
+                placeholder="e.g. 25"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-stone-600 mb-1.5">
+                Event Type *
+              </label>
+              <select
+                required
+                value={form.eventType}
+                onChange={(e) => set("eventType", e.target.value)}
+                className="w-full border border-stone-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-amber-400 transition-colors bg-white"
+              >
+                <option value="">Select type</option>
+                {EVENT_TYPES.map((t) => (
+                  <option key={t} value={t}>
+                    {t}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          {/* Occasion */}
+          <div>
+            <label className="block text-xs font-medium text-stone-600 mb-1.5">
+              What are we celebrating?
+            </label>
+            <input
+              value={form.occasion}
+              onChange={(e) => set("occasion", e.target.value)}
+              className="w-full border border-stone-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-amber-400 transition-colors bg-white"
+              placeholder="Birthday, anniversary, team milestone…"
+            />
+          </div>
+
+          {/* Flexible + how found */}
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-xs font-medium text-stone-600 mb-1.5">
+                Is your date flexible?
+              </label>
+              <select
+                value={form.flexible}
+                onChange={(e) => set("flexible", e.target.value)}
+                className="w-full border border-stone-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-amber-400 transition-colors bg-white"
+              >
+                <option value="">Select</option>
+                <option>Yes, very flexible</option>
+                <option>Somewhat flexible</option>
+                <option>No, date is fixed</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-stone-600 mb-1.5">
+                How did you find us?
+              </label>
+              <select
+                value={form.howFound}
+                onChange={(e) => set("howFound", e.target.value)}
+                className="w-full border border-stone-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-amber-400 transition-colors bg-white"
+              >
+                <option value="">Select</option>
+                {HOW_FOUND.map((h) => (
+                  <option key={h} value={h}>
+                    {h}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          {/* Details */}
+          <div>
+            <label className="block text-xs font-medium text-stone-600 mb-1.5">
+              Tell us about your event *
+            </label>
+            <textarea
+              required
+              rows={4}
+              value={form.details}
+              onChange={(e) => set("details", e.target.value)}
+              className="w-full border border-stone-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-amber-400 transition-colors bg-white resize-none"
+              placeholder="Location, vibe, any special requests or ideas — the more detail the better!"
+            />
+          </div>
+
+          <Button type="submit" variant="primary" full>
+            Send Inquiry →
+          </Button>
+          <p className="text-center text-xs text-stone-400">
+            We&apos;ll get back to you within 48 hours.
+          </p>
+        </form>
+          </div>
+        </div>
+      </div>
+    </section>
+  )
+}
