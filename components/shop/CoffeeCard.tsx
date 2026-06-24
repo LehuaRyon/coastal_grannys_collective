@@ -18,7 +18,7 @@ const badgeColors: Record<string, string> = {
 
 export function CoffeeCard({ coffee, onViewDetails }: CoffeeCardProps) {
   const { addItem } = useCartStore();
-  const [imgError, setImgError] = useState(false);
+  const [imgError, setImgError] = useState(coffee.hasImage === false);
   const defaultSize = Object.keys(coffee.prices)[0];
   const defaultPrice = coffee.prices[defaultSize];
 
@@ -39,6 +39,7 @@ export function CoffeeCard({ coffee, onViewDetails }: CoffeeCardProps) {
       price: defaultPrice,
       gradient: coffee.gradient,
       slug: coffee.slug,
+      hasImage: coffee.hasImage,
     });
     showToast(`"${coffee.name}" added to cart`);
   }

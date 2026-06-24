@@ -25,14 +25,14 @@ export function ProductModal({ product, onClose }: ProductModalProps) {
   const [selectedSize, setSelectedSize] = useState<string | null>(null);
   const [selectedRoast, setSelectedRoast] = useState<string | null>(null);
   const [imgLoaded, setImgLoaded] = useState(false);
-  const [imgError, setImgError] = useState(false);
+  const [imgError, setImgError] = useState(product?.hasImage === false);
 
   useEffect(() => {
     setSelectedSize(null);
     setSelectedRoast(null);
     setImgLoaded(false);
-    setImgError(false);
-  }, [product?.id]);
+    setImgError(product?.hasImage === false);
+  }, [product?.id, product?.hasImage]);
 
   // Sizes sorted biggest → smallest; default 1 lb
   const sizes = product
@@ -56,6 +56,7 @@ export function ProductModal({ product, onClose }: ProductModalProps) {
       price: activePrice,
       gradient: product.gradient,
       slug: product.slug,
+      hasImage: product.hasImage,
     });
     showToast(`"${product.name}" added to cart`);
     onClose();

@@ -1,5 +1,15 @@
+import { existsSync } from 'node:fs';
+import { join } from 'node:path';
 import type { Product } from '@prisma/client';
 import type { Coffee, Subscription, Merch } from '@/lib/types';
+
+function productImageExists(slug: string): boolean {
+  try {
+    return existsSync(join(process.cwd(), 'public', 'images', 'products', `${slug}.png`));
+  } catch {
+    return true;
+  }
+}
 
 export function dbToCoffee(p: Product): Coffee {
   return {
@@ -13,7 +23,9 @@ export function dbToCoffee(p: Product): Coffee {
     elevation: p.elevation ?? '',
     roast: (p.roast ?? 'Medium') as Coffee['roast'],
     notes: p.notes,
-    prices: (p.prices as Record<string, number>) ?? {},
+    prices: (p.prices && typeof p.prices === 'object' && !Array.isArray(p.prices)
+      ? (p.prices as Record<string, number>)
+      : {}),
     gradient: p.gradient ?? 'linear-gradient(135deg,#5C3D1E 0%,#8B5E3C 100%)',
     description: p.description ?? '',
     roastOptions: p.options ?? [],
@@ -21,6 +33,7 @@ export function dbToCoffee(p: Product): Coffee {
     featured: p.featured,
     badge: p.badge ?? undefined,
     badgeClass: (p.badgeClass as Coffee['badgeClass']) ?? undefined,
+    hasImage: productImageExists(p.slug),
   };
 }
 

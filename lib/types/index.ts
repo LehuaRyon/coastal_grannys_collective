@@ -17,6 +17,7 @@ export interface Coffee {
   featured: boolean;
   badge?: string;
   badgeClass?: 'badge-gold' | 'badge-red';
+  hasImage?: boolean;
 }
 
 export interface Subscription {
@@ -53,6 +54,7 @@ export interface CartItem {
   gradient: string;
   icon?: string;
   slug?: string;
+  hasImage?: boolean;
   qty: number;
 }
 

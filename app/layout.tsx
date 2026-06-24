@@ -29,7 +29,7 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={`${nunito.variable} ${caveat.variable}`}>
+    <html lang="en" className={`${nunito.variable} ${caveat.variable}`} data-scroll-behavior="smooth">
       <body className="font-sans">
         <Providers>
           <Header />

@@ -126,6 +126,7 @@ export default async function HomePage() {
                 prices={coffee.prices}
                 gradient={coffee.gradient}
                 badge={coffee.badge}
+                hasImage={coffee.hasImage}
               />
             ))}
           </div>

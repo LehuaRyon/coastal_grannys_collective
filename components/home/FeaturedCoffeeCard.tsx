@@ -13,10 +13,11 @@ interface FeaturedCoffeeCardProps {
   prices: Record<string, number>;
   gradient: string;
   badge?: string;
+  hasImage?: boolean;
 }
 
-export function FeaturedCoffeeCard({ slug, name, subtitle, origin, notes, prices, gradient, badge }: FeaturedCoffeeCardProps) {
-  const [imgError, setImgError] = useState(false);
+export function FeaturedCoffeeCard({ slug, name, subtitle, origin, notes, prices, gradient, badge, hasImage }: FeaturedCoffeeCardProps) {
+  const [imgError, setImgError] = useState(hasImage === false);
 
   const [smallestSize, lowestPrice] = Object.entries(prices).sort((a, b) => a[1] - b[1])[0] ?? ['1 lb', 0];
 

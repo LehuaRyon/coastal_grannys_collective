@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/Button';
 import type { CartItem } from '@/lib/types';
 
 function CartItemThumb({ item }: { item: CartItem }) {
-  const [imgError, setImgError] = useState(false);
+  const [imgError, setImgError] = useState(item.hasImage === false);
   const showImg = item.type === 'coffee' && item.slug && !imgError;
 
   return (
