@@ -101,7 +101,7 @@ export const COFFEES: Coffee[] = [
     name: 'Hawaii Kona',
     subtitle: 'Hawaii · Washed · Medium Roast',
     origin: 'Kona Coast, Hawaii',
-    region: 'Pacific',
+    region: 'Pacific Islands',
     process: 'Washed',
     elevation: '600–900m',
     roast: 'Medium',

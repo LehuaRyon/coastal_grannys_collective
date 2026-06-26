@@ -318,6 +318,44 @@ Stripe Dashboard → Developers → Webhooks → Add endpoint:
 
 ---
 
+## Development vs. Production Environments
+
+You should run **two separate Neon databases** — one for development and one for production — so you never test against real customer data.
+
+### Setting up a dev database (Neon branching)
+
+Neon lets you create a database branch in seconds — it's a full copy of your schema (and optionally your data) that you can reset or destroy without affecting production.
+
+1. Go to [neon.tech](https://neon.tech) → your project → **Branches** → **Create branch**
+2. Name it `dev` (or `staging`)
+3. Copy the **Connection string** from the new branch
+4. In `.env.local`, use the dev branch connection string for `DATABASE_URL` and `DIRECT_URL`
+5. Run `npm run db:migrate` to apply the schema to the dev branch
+6. Run `npm run db:seed-products` to populate dev data
+
+Your production database stays untouched. When you deploy to Vercel, add the **production** connection strings as environment variables there.
+
+### Stripe test vs. live mode
+
+`pk_test_` / `sk_test_` keys (already in `.env.local.example`) use Stripe's test mode — no real money changes hands. You can:
+
+- Pay with test card `4242 4242 4242 4242`, expiry `12/29`, CVC `123`
+- Use `stripe listen --forward-to localhost:3000/api/webhooks/stripe` to receive webhook events locally
+- The Stripe CLI prints a `whsec_...` secret for your local session — use that as `STRIPE_WEBHOOK_SECRET` in `.env.local`
+
+When you're ready to go live, swap in live Stripe keys in Vercel (not in `.env.local`) and register a new production webhook endpoint in the Stripe Dashboard.
+
+### Environment summary
+
+| | Local dev | Production (Vercel) |
+|---|---|---|
+| Database | Neon dev branch | Neon main branch |
+| Stripe | Test keys (`pk_test_`, `sk_test_`) | Live keys (`pk_live_`, `sk_live_`) |
+| Stripe webhook | `stripe listen` CLI | Registered in Stripe Dashboard |
+| `AUTH_SECRET` | Any random string | `openssl rand -base64 32` |
+
+---
+
 ## Going Live Checklist
 
 **Complete before taking real orders:**
@@ -327,6 +365,51 @@ Stripe Dashboard → Developers → Webhooks → Add endpoint:
 3. **Deploy to Vercel** — see above
 4. **Register production webhook in Stripe (live mode)** — separate from test mode webhook
 5. **Flip to live keys** — replace `pk_test_` / `sk_test_` with live keys in Vercel → redeploy
+
+---
+
+## Implementation Game Plan
+
+Ordered by priority — work through these phases before going live.
+
+### Phase 1 — Pre-Launch Essentials
+
+These are blocking issues: the site works locally but is not ready for real customers without them.
+
+| # | Task | Where |
+|---|---|---|
+| 1 | **Set up a dev Neon branch** so you're not testing against production data | See "Dev vs. Prod" section above |
+| 2 | **Set up Resend (or SendGrid)** for transactional email — required before: contact form, wholesale, gift card delivery, and order shipped notifications work end to end | Need email service account |
+| 3 | **Connect contact form to DB + email** — `ContactPageClient.tsx` has a TODO; currently shows "sent" but doesn't actually store or email anything | `app/contact/ContactPageClient.tsx` |
+| 4 | **Connect wholesale form to DB + email** — same issue | `app/wholesale/WholesalePageClient.tsx` |
+| 5 | **Connect coffee cart inquiry to DB** — currently opens a mailto: link which requires a local mail client | `app/coffee-cart/CoffeeCartClient.tsx` |
+| 6 | **Add Submission model + admin tab** — so contact, wholesale, and cart inquiries appear in the admin dashboard | See TODO in `app/admin/page.tsx` |
+
+### Phase 2 — Revenue-Critical
+
+These don't block launch but directly affect how much money the site makes.
+
+| # | Task | Where |
+|---|---|---|
+| 7 | **Swap Stripe subscriptions to recurring billing** — subscriptions currently charge as one-time payments, so customers aren't automatically rebilled | `app/api/create-payment-intent/route.ts` + Stripe Subscriptions API |
+| 8 | **Gift card email delivery** — currently adds to cart and records the order but never emails the recipient a code or balance | Need email service + gift card redemption logic |
+| 9 | **"Your order has shipped" email** — admin marks order shipped, customer gets a notification | Admin orders page + email service |
+
+### Phase 3 — Admin Quality-of-Life
+
+| # | Task | Where |
+|---|---|---|
+| 10 | **Orders: date range filter + status filter** — filter by past 30/60/90 days and by status (paid, refunded, etc.) | `app/admin/orders/page.tsx` has a TODO |
+| 11 | **Orders: CSV export** — download current filtered view as a spreadsheet | `app/admin/orders/page.tsx` has a TODO |
+| 12 | **Calculated shipping** — currently flat $8 or free over $60; integrate a carrier API (EasyPost / Shippo) for real rates | `components/checkout/CheckoutModal.tsx` + `components/cart/CartDrawer.tsx` |
+
+### Phase 4 — Customer Experience
+
+| # | Task | Where |
+|---|---|---|
+| 13 | **Star ratings on coffee cards** — requires `Rating` model (userId, coffeeId, 1–5 stars), order-history gate (only buyers can rate), aggregated display on `CoffeeCard` | `components/shop/CoffeeCard.tsx` has a TODO |
+| 14 | **"Notify Me" for out-of-stock coffees** — requires `StockAlert` model; email all subscribers when admin marks item back in stock | `components/shop/CoffeeCard.tsx` has a TODO |
+| 15 | **Inventory quantity tracking** — currently just an in/out toggle; add `qty` field and decrement on purchase via webhook | `prisma/schema.prisma` + webhook |
 
 ---
 

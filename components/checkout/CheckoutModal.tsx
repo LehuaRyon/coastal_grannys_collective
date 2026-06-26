@@ -265,7 +265,14 @@ export function CheckoutModal({ isOpen, onClose }: CheckoutModalProps) {
                   <Button variant="ghost" onClick={handleClose}>
                     Cancel
                   </Button>
-                  <Button variant="primary" full onClick={() => setStep(2)}>
+                  <Button
+                    variant="primary"
+                    full
+                    onClick={() => {
+                      if (!contact.firstName || !contact.email) return;
+                      setStep(2);
+                    }}
+                  >
                     Continue →
                   </Button>
                 </div>
@@ -354,7 +361,14 @@ export function CheckoutModal({ isOpen, onClose }: CheckoutModalProps) {
                   <Button variant="ghost" onClick={() => setStep(1)}>
                     ← Back
                   </Button>
-                  <Button variant="primary" full onClick={goToStep3}>
+                  <Button
+                    variant="primary"
+                    full
+                    onClick={() => {
+                      if (!shipping.address || !shipping.city || !shipping.zip) return;
+                      goToStep3();
+                    }}
+                  >
                     Continue →
                   </Button>
                 </div>

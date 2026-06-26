@@ -219,9 +219,11 @@ export default function ProductForm({ product }: { product?: Product }) {
               <select {...f('region')} className={inputClass}>
                 <option value="">— None —</option>
                 <option>Africa</option>
+                <option>Caribbean</option>
                 <option>Latin America</option>
                 <option>Central America</option>
                 <option>Asia Pacific</option>
+                <option>Pacific Islands</option>
                 <option>Middle East</option>
                 <option>Other</option>
               </select>

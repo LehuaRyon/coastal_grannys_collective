@@ -56,8 +56,9 @@ export function MobileNav({ isOpen, onClose, session }: MobileNavProps) {
           <Link href="/" className="flex items-center gap-2" onClick={onClose}>
             <span className="text-xl text-amber-700">◉</span>
             <span className="font-serif text-sm leading-tight">
-              Grounds <br />
-              <em className="text-amber-700 not-italic">Coffee Co.</em>
+              <span style={{ color: '#C47878' }}>Coastal</span>
+              <br />
+              <em className="not-italic" style={{ color: '#CC9818' }}>Granny&apos;s</em>
             </span>
           </Link>
           <button

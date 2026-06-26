@@ -2,8 +2,9 @@ import { auth } from '@/auth';
 import { redirect } from 'next/navigation';
 import { prisma } from '@/lib/db';
 import Link from 'next/link';
+import { SignOutButton } from '@/components/auth/SignOutButton';
 
-export const metadata = { title: 'My Account — Grounds Coffee Co.' };
+export const metadata = { title: "My Account — Coastal Granny's Collective" };
 
 const STATUS_COLORS: Record<string, string> = {
   paid: 'bg-green-100 text-green-800',
@@ -48,12 +49,7 @@ export default async function AccountDashboard() {
             <h1 className="font-serif text-3xl text-stone-900">My Account</h1>
             <p className="text-stone-500 text-sm mt-1">{user.email}</p>
           </div>
-          <Link
-            href="/api/auth/signout"
-            className="text-sm text-stone-500 hover:text-stone-900 transition-colors"
-          >
-            Sign out
-          </Link>
+          <SignOutButton />
         </div>
 
         {/* Account info */}

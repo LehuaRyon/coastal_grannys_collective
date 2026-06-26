@@ -104,7 +104,7 @@ export function CoffeeCard({ coffee, onViewDetails }: CoffeeCardProps) {
       <div className="p-4">
         <p className="font-serif text-xl text-stone-900 font-medium leading-tight mb-0.5">{coffee.name}</p>
         <p className="text-xs text-stone-400 mb-0.5">{coffee.subtitle}</p>
-<div className="flex flex-wrap gap-1 mb-3">
+        <div className="flex flex-wrap gap-1 mb-3">
           {coffee.notes.map((note) => (
             <span
               key={note}

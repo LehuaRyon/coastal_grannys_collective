@@ -2,7 +2,7 @@ import Link from 'next/link';
 import { auth } from '@/auth';
 import { redirect } from 'next/navigation';
 
-export const metadata = { title: 'Admin — Grounds Coffee Co.' };
+export const metadata = { title: "Admin — Coastal Granny's Collective" };
 
 const NAV = [
   { label: 'Dashboard', href: '/admin' },

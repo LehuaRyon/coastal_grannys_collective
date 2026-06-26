@@ -1,3 +1,4 @@
+import Link from "next/link"
 import { prisma } from "@/lib/db"
 import {
   CoffeeBeanIcon,
@@ -347,12 +348,12 @@ export default async function AboutPage() {
               >
                 <InstagramLogoIcon size={16} weight="duotone" /> @coastalgrannys
               </a>
-              <a
+              <Link
                 href="/coffee-cart"
                 className="inline-flex items-center gap-2 border border-stone-900/30 text-stone-900 font-semibold px-8 py-3 rounded-full hover:bg-stone-900/5 transition-colors text-sm"
               >
                 Book the Cart →
-              </a>
+              </Link>
             </div>
           </div>
         </div>
