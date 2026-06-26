@@ -55,13 +55,18 @@ export function dbToSubscription(p: Product): Subscription {
 }
 
 export function dbToMerch(p: Product): Merch {
+  const hasImage = existsSync(join(process.cwd(), 'public', 'images', 'products', `${p.slug}.png`));
+  const hasFrontBack = existsSync(join(process.cwd(), 'public', 'images', 'products', `${p.slug}-front.png`));
   return {
     id: p.id,
+    slug: p.slug,
     name: p.name,
     icon: p.icon ?? '📦',
     desc: p.description ?? '',
     price: p.price,
     options: p.options.length > 0 ? p.options : null,
     gradient: p.gradient ?? 'linear-gradient(135deg,#EAE0D4 0%,#C4B8AA 100%)',
+    hasImage: hasImage || hasFrontBack,
+    hasFrontBack,
   };
 }

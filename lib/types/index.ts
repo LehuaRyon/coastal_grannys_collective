@@ -37,12 +37,15 @@ export interface Subscription {
 
 export interface Merch {
   id: string;
+  slug: string;
   name: string;
   icon: string;
   desc: string;
   price: number;
   options: string[] | null;
   gradient: string;
+  hasImage?: boolean;
+  hasFrontBack?: boolean;
 }
 
 export interface CartItem {

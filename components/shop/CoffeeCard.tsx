@@ -17,7 +17,8 @@ const badgeColors: Record<string, string> = {
 };
 
 export function CoffeeCard({ coffee, onViewDetails }: CoffeeCardProps) {
-  const { addItem } = useCartStore();
+  const { addItem, items } = useCartStore();
+  const cartQty = items.filter((i) => i.id === coffee.id).reduce((sum, i) => sum + i.qty, 0);
   const [imgError, setImgError] = useState(coffee.hasImage === false);
   const defaultSize = Object.keys(coffee.prices)[0];
   const defaultPrice = coffee.prices[defaultSize];
@@ -60,7 +61,7 @@ export function CoffeeCard({ coffee, onViewDetails }: CoffeeCardProps) {
             <img
               src={`/images/products/${coffee.slug}.png`}
               alt={coffee.name}
-              className="absolute inset-0 w-full h-full object-cover"
+              className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
               onError={() => setImgError(true)}
             />
             <div className="absolute inset-0 bg-gradient-to-t from-black/30 via-transparent to-transparent" />
@@ -102,7 +103,7 @@ export function CoffeeCard({ coffee, onViewDetails }: CoffeeCardProps) {
           a POST /api/ratings endpoint that verifies the order history before saving,
           and a GET /api/coffees/[slug]/rating endpoint for the aggregated score. */}
       <div className="p-4">
-        <p className="font-serif text-xl text-stone-900 font-medium leading-tight mb-0.5">{coffee.name}</p>
+        <p className="font-serif text-xl text-stone-900 font-medium leading-tight mb-0.5 group-hover:text-amber-700 transition-colors">{coffee.name}</p>
         <p className="text-xs text-stone-400 mb-0.5">{coffee.subtitle}</p>
         <div className="flex flex-wrap gap-1 mb-3">
           {coffee.notes.map((note) => (
@@ -115,23 +116,20 @@ export function CoffeeCard({ coffee, onViewDetails }: CoffeeCardProps) {
           ))}
         </div>
         <div className="flex items-center justify-between">
-          <div className="text-sm font-semibold text-stone-900">
-            ${defaultPrice}{' '}
-            <span className="text-xs font-normal text-stone-400">/ {defaultSize}</span>
+          <div>
+            <div className="text-sm font-semibold text-stone-900">
+              ${defaultPrice}{' '}
+              <span className="text-xs font-normal text-stone-400">/ {defaultSize}</span>
+            </div>
+            {cartQty > 0 && (
+              <p className="text-[10px] text-amber-700 font-medium mt-0.5">{cartQty} in cart</p>
+            )}
           </div>
-          {/* TODO: For out-of-stock coffees, replace the disabled "Unavailable" button with
-              a "Notify Me" button for logged-in customers. Clicking it should save a
-              StockAlert record (userId, coffeeId) in the DB. When an admin toggles
-              inStock back to true (via the admin dashboard), trigger a job that emails
-              all users with a matching StockAlert for that coffee, then deletes those
-              records. Guests should see a prompt to sign in to enable the alert. */}
-          <button
-            onClick={handleQuickAdd}
-            disabled={!coffee.inStock}
-            className={`text-xs px-3 py-1.5 rounded-full transition-colors ${coffee.inStock ? 'bg-stone-900 hover:bg-stone-700 text-white' : 'bg-stone-100 text-stone-400 cursor-not-allowed'}`}
-          >
-            {coffee.inStock ? (coffee.roastOptions.length > 0 ? 'Select' : 'Add') : 'Unavailable'}
-          </button>
+          {!coffee.inStock && (
+            <span className="text-xs px-3 py-1.5 rounded-full bg-stone-100 text-stone-400">
+              Unavailable
+            </span>
+          )}
         </div>
       </div>
     </div>

@@ -16,7 +16,7 @@ async function main() {
 
   // Remove old placeholder coffees that no longer exist in the real inventory
   await prisma.product.deleteMany({
-    where: { slug: { in: ['c1', 'c2', 'c3', 'c4', 'c5', 'c6'] } },
+    where: { slug: { in: ['c1', 'c2', 'c3', 'c4', 'c5', 'c6', 'cascade-hop-bourbon'] } },
   });
 
   // ── Coffees ────────────────────────────────────────────────
@@ -77,7 +77,7 @@ async function main() {
       price: tiers(41)['8 oz / ½ lb'],
       gradient: 'linear-gradient(135deg,#8A4A4A 0%,#C47878 55%,#E0A8A0 100%)',
       description: "From legendary Colombian producer Edwin Noreña — an award winner who sets the standard for experimental processing — this gesha varietal goes through double carbonic maceration with galaxy hops. Galaxy hops add tropical and fruity flavor; the double carbonic maceration amplifies that even further. Expect coriander, mango, pineapple, white tea, pine, juniper, ginger, and dank hop florals that evolve the longer it rests.",
-      inStock: true, featured: true, position: 4, salesRank: 100,
+      inStock: true, featured: false, position: 5, salesRank: 100,
       badge: 'Staff Pick', badgeClass: 'badge-gold',
       roastOptions: ['Light', 'Light-Medium', 'Medium'],
     },
@@ -138,20 +138,20 @@ async function main() {
     // ── Colombian Co-Ferments ───────────────────────────────
 
     {
-      slug: 'cascade-hop-bourbon',
-      name: 'Cascade Hop Pink Bourbon',
-      subtitle: 'Colombia · Cascade Hop Co-Ferment',
-      origin: 'Colombia',
+      slug: 'flower-child',
+      name: 'Flower Child',
+      subtitle: 'Quindío, Colombia · Cascade Hop DCM · Pink Bourbon',
+      origin: 'Quindío, Colombia',
       region: 'Latin America',
-      process: 'Cascade Hop Co-Ferment',
+      process: 'Double Carbonic Maceration with Cascade Hops',
       elevation: '1,600–1,900m',
       roast: 'Light',
-      notes: ['citrus hops', 'stone fruit', 'floral', 'tropical'],
+      notes: ['fruit loops', 'juniper', 'white tea'],
       prices: tiers(41),
       price: tiers(41)['8 oz / ½ lb'],
       gradient: 'linear-gradient(135deg,#4A3820 0%,#7A5C30 55%,#A88048 100%)',
-      description: "Pink Bourbon is already one of the most sought-after Colombian varietals — add a cascade hop co-fermentation and you get something completely wild. Cascade hops bring a citrus-forward, resinous character that plays beautifully against the inherently fruity nature of Pink Bourbon. Best at a light roast where the aromatics are at their most expressive.",
-      inStock: true, featured: false, position: 7, salesRank: 55,
+      description: "Flower Child is a bright, botanical-forward masterpiece that captures the essence of a sun-drenched meadow in full bloom. Roasted by Ryan of Coastal Granny's, this exceptional selection showcases a masterclass in light roasting, meticulously dialed to preserve the delicate, wild aromatics of the rare Pink Bourbon varietal. Flower Child is like a breath of fresh-cut flowers — vibrant, clean, and beautifully unconventional.",
+      inStock: true, featured: true, position: 4, salesRank: 55,
       roastOptions: ['Light', 'Light-Medium', 'Medium'],
     },
     {
@@ -503,34 +503,60 @@ async function main() {
 
   // ── Merch ──────────────────────────────────────────────────
 
+  // Remove old placeholder merch slugs
+  await prisma.product.deleteMany({
+    where: { slug: { in: ['m1', 'm2', 'm3', 'm4'] } },
+  });
+
   const merch = [
     {
-      slug: 'm1', name: 'Canvas Tote', icon: '👜', price: 28,
-      description: "Heavy-duty cotton canvas with the Coastal Granny's logo. The perfect bag for hauling your weekly coffee haul — and everything else.",
-      options: ['Natural', 'Black'],
-      gradient: 'linear-gradient(135deg,#5C4A38 0%,#9A7A5A 55%,#C4A080 100%)',
+      slug: 'coffee-cart-tee', name: 'Coffee Cart Tee', icon: '👕', price: 38,
+      description: "Relaxed-fit heavyweight tee in natural. Chest logo on the front, coffee cart illustration across the back. The everyday wear for people who take their coffee seriously.",
+      options: ['XS', 'S', 'M', 'L', 'XL', 'XXL'],
+      gradient: 'linear-gradient(135deg,#E8E0D4 0%,#D4C8B8 100%)',
       position: 1,
     },
     {
-      slug: 'm2', name: 'Ceramic Mug', icon: '🍵', price: 42,
-      description: 'Hand-thrown stoneware mug, 12 oz. Each piece is uniquely yours. Microwave and dishwasher safe. Holds up beautifully.',
-      options: ['Cream', 'Charcoal'],
-      gradient: 'linear-gradient(135deg,#2A1808 0%,#5C3820 55%,#8B5830 100%)',
+      slug: 'grannys-tee', name: "Granny's Tee", icon: '👕', price: 38,
+      description: "The original. Two grannies, one mug, good vibes. Heavyweight natural tee with a small badge logo on the chest and the full graphic across the back.",
+      options: ['XS', 'S', 'M', 'L', 'XL', 'XXL'],
+      gradient: 'linear-gradient(135deg,#E8E0D4 0%,#D4C8B8 100%)',
       position: 2,
     },
     {
-      slug: 'm3', name: 'Pour-Over Starter Kit', icon: '🫗', price: 65,
-      description: 'Everything you need for your first (or hundredth) great pour-over: V60 dripper, 50 filters, gooseneck kettle guide, and our recipe card.',
-      options: [],
-      gradient: 'linear-gradient(135deg,#6A3A40 0%,#A87878 55%,#D4A8A0 100%)',
+      slug: 'coastal-roasts-tee', name: 'Coastal Roasts Tee', icon: '👕', price: 38,
+      description: "The cart, the waves, the granny — all on one shirt. Chest logo with the full coastal cart scene across the back. Heavyweight natural cotton, relaxed fit.",
+      options: ['XS', 'S', 'M', 'L', 'XL', 'XXL'],
+      gradient: 'linear-gradient(135deg,#E8E0D4 0%,#D4C8B8 100%)',
       position: 3,
     },
     {
-      slug: 'm4', name: 'Origin T-Shirt', icon: '👕', price: 38,
-      description: "Soft organic cotton tee featuring the Coastal Granny's origin map graphic across the back. Minimal chest logo. Relaxed fit. You will live in this.",
-      options: ['XS', 'S', 'M', 'L', 'XL', 'XXL'],
-      gradient: 'linear-gradient(135deg,#4A3820 0%,#7A5C30 55%,#A88048 100%)',
+      slug: 'canvas-tote', name: 'Canvas Tote', icon: '👜', price: 32,
+      description: "Heavy canvas tote with crossbody strap and front pocket. The Coastal Granny's cart design — built for farmers markets, coffee runs, and everything in between.",
+      options: [],
+      gradient: 'linear-gradient(135deg,#3A4A28 0%,#6B7A4A 55%,#8A9660 100%)',
       position: 4,
+    },
+    {
+      slug: 'ceramic-mug', name: 'Ceramic Mug', icon: '🍵', price: 28,
+      description: "12 oz ceramic mug with the Coastal Granny's cart illustration. Substantial feel, clean finish. Your morning ritual just got a little more on-brand.",
+      options: [],
+      gradient: 'linear-gradient(135deg,#8A4A4A 0%,#C47878 55%,#E0A8A0 100%)',
+      position: 5,
+    },
+    {
+      slug: 'ceramic-coaster', name: 'Ceramic Coaster', icon: '🫙', price: 14,
+      description: "Round ceramic coaster with the Coastal Granny's character logo. Absorbent, cork-backed, and cute enough to leave out. Set of 1.",
+      options: [],
+      gradient: 'linear-gradient(135deg,#C4A880 0%,#A88860 100%)',
+      position: 6,
+    },
+    {
+      slug: 'leather-keychain', name: 'Leather Keychain', icon: '🔑', price: 18,
+      description: "Blush leather keychain tag with gold hardware and a daisy charm. Coastal Granny's branding embossed on the front. The smallest way to carry the brand.",
+      options: [],
+      gradient: 'linear-gradient(135deg,#D4A8B0 0%,#C49098 100%)',
+      position: 7,
     },
   ];
 
@@ -541,7 +567,7 @@ async function main() {
       create: { ...item, type: 'merch', notes: [], features: [] },
     });
   }
-  console.log('  ✓ 4 merch items');
+  console.log(`  ✓ ${merch.length} merch items`);
 
   // ── Site Content ───────────────────────────────────────────
 

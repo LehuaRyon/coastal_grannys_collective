@@ -37,7 +37,7 @@ function sizeToLbs(s: string): number {
 }
 
 export function ProductModal({ product, onClose }: ProductModalProps) {
-  const { addItem } = useCartStore();
+  const { addItem, items, updateQty, removeItem } = useCartStore();
   const [selectedSize, setSelectedSize] = useState<string | null>(null);
   const [selectedRoast, setSelectedRoast] = useState<string | null>(null);
   const [imgLoaded, setImgLoaded] = useState(false);
@@ -59,6 +59,9 @@ export function ProductModal({ product, onClose }: ProductModalProps) {
 
   // Roast: default to the coffee's recommended roast
   const activeRoast = selectedRoast ?? product?.roast ?? 'Medium';
+
+  const cartKey = product ? `${product.id}-${activeSize}-${activeRoast.replace(/\s/g, '-')}` : null;
+  const cartQty = cartKey ? (items.find((i) => i.key === cartKey)?.qty ?? 0) : 0;
 
   function handleAddToCart() {
     if (!product || !activeSize || !product.inStock) return;
@@ -144,6 +147,10 @@ export function ProductModal({ product, onClose }: ProductModalProps) {
                   <p className="text-xs text-stone-700 font-medium capitalize">{val}</p>
                 </div>
               ))}
+              <div className="col-span-2 bg-stone-50 rounded-lg p-2.5">
+                <p className="text-[10px] font-semibold text-stone-400 uppercase tracking-wider mb-0.5">Format</p>
+                <p className="text-xs text-stone-700 font-medium">Whole Bean</p>
+              </div>
             </div>
 
             {product.inStock ? (
@@ -199,6 +206,23 @@ export function ProductModal({ product, onClose }: ProductModalProps) {
                 </div>
 
                 <div className="text-2xl font-serif text-stone-900 mb-4">${activePrice}</div>
+                {cartQty > 0 && cartKey && (
+                  <div className="flex items-center gap-3 mb-3">
+                    <span className="text-xs font-semibold text-stone-400 uppercase tracking-wider">Quantity</span>
+                    <div className="flex items-center border border-stone-200 rounded-full overflow-hidden">
+                      <button
+                        onClick={() => cartQty === 1 ? removeItem(cartKey) : updateQty(cartKey, -1)}
+                        className="w-8 h-8 flex items-center justify-center text-stone-500 hover:bg-stone-100 transition-colors"
+                      >−</button>
+                      <span className="px-3 text-sm font-semibold text-stone-900">{cartQty}</span>
+                      <button
+                        onClick={() => updateQty(cartKey, 1)}
+                        className="w-8 h-8 flex items-center justify-center text-stone-500 hover:bg-stone-100 transition-colors"
+                      >+</button>
+                    </div>
+                    <span className="text-xs text-amber-700 font-medium">in cart</span>
+                  </div>
+                )}
                 <Button variant="dark" full onClick={handleAddToCart}>
                   Add to Cart — {activeSize} · {activeRoast} Roast
                 </Button>

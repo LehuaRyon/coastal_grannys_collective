@@ -1,55 +1,18 @@
 "use client"
 
 import { Button } from "@/components/ui/Button"
-import { showToast } from "@/components/ui/Toast"
-import { useCartStore } from "@/lib/store/cart"
+import { ArrowsClockwiseIcon, GiftIcon } from "@phosphor-icons/react"
 import type { Merch } from "@/lib/types"
-import {
-  CoffeeIcon,
-  DropIcon,
-  GiftIcon,
-  HandbagIcon,
-  PackageIcon,
-  TShirtIcon,
-} from "@phosphor-icons/react"
 import { useRouter } from "next/navigation"
 import { useState } from "react"
-
-function MerchIcon({ icon }: { icon: string }) {
-  const props = { size: 52, weight: "duotone" as const, color: "white" }
-  if (icon === "👜") return <HandbagIcon {...props} />
-  if (icon === "🍵") return <CoffeeIcon {...props} />
-  if (icon === "🫗") return <DropIcon {...props} />
-  if (icon === "👕") return <TShirtIcon {...props} />
-  return <PackageIcon {...props} />
-}
+import { MerchModal } from "@/components/shop/MerchModal"
+import { useCartStore } from "@/lib/store/cart"
 
 export function MerchPageClient({ merch }: { merch: Merch[] }) {
   const router = useRouter()
-  const { addItem } = useCartStore()
-  const [selectedOptions, setSelectedOptions] = useState<
-    Record<string, string>
-  >({})
-
-  function selectOption(id: string, opt: string) {
-    setSelectedOptions((prev) => ({ ...prev, [id]: opt }))
-  }
-
-  function handleAddToCart(m: Merch) {
-    const opt = selectedOptions[m.id] ?? m.options?.[0] ?? null
-    const variant = opt ?? "One Size"
-    addItem({
-      key: `${m.id}-${variant}`,
-      id: m.id,
-      type: "merch",
-      name: m.name,
-      variant,
-      price: m.price,
-      gradient: m.gradient,
-      icon: m.icon,
-    })
-    showToast(`"${m.name}" added to cart`)
-  }
+  const [selected, setSelected] = useState<Merch | null>(null)
+  const [showingBack, setShowingBack] = useState<Record<string, boolean>>({})
+  const { items } = useCartStore()
 
   return (
     <section className="max-w-7xl mx-auto px-4 sm:px-6 py-14">
@@ -57,78 +20,82 @@ export function MerchPageClient({ merch }: { merch: Merch[] }) {
         <p className="text-xs font-semibold text-amber-700 uppercase tracking-widest mb-1">
           Carry the Brand
         </p>
-        <h1 className="font-serif text-4xl text-stone-900 mb-2">
-          Merch &amp; Gear
-        </h1>
+        <h1 className="font-serif text-4xl text-stone-900 mb-2">Merch &amp; Gear</h1>
         <p className="text-stone-500 text-sm max-w-xl mx-auto">
-          Thoughtfully made goods for coffee lovers. Limited quantities — made
-          to last.
+          Thoughtfully made goods for coffee lovers. Limited quantities — made to last.
         </p>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6">
         {merch.map((m) => {
-          const activeOpt = selectedOptions[m.id] ?? m.options?.[0]
+          const isBack = !!showingBack[m.id]
+          const imgSrc = m.hasFrontBack
+            ? `/images/products/${m.slug}-${isBack ? "back" : "front"}.png`
+            : `/images/products/${m.slug}.png`
+
           return (
             <div
               key={m.id}
-              className="bg-white rounded-2xl shadow-sm border border-stone-100 overflow-hidden flex flex-col"
+              onClick={() => setSelected(m)}
+              className="group bg-white rounded-2xl shadow-sm border border-stone-100 overflow-hidden cursor-pointer hover:shadow-md hover:border-stone-200 transition-all duration-300"
             >
-              <div
-                className="h-44 flex items-center justify-center"
-                style={{ background: m.gradient }}
-              >
-                <MerchIcon icon={m.icon} />
-              </div>
-
-              <div className="p-5 flex flex-col flex-1">
-                <h3 className="font-serif text-lg text-stone-900 mb-1">
-                  {m.name}
-                </h3>
-                <p className="text-xs text-stone-500 leading-relaxed mb-4 flex-1">
-                  {m.desc}
-                </p>
-
-                {m.options && (
-                  <div className="mb-4">
-                    <p className="text-[10px] font-semibold text-stone-400 uppercase tracking-wider mb-2">
-                      Option
-                    </p>
-                    <div className="flex flex-wrap gap-1.5">
-                      {m.options.map((opt) => (
+              {/* Image */}
+              <div className="relative overflow-hidden" style={{ aspectRatio: "1 / 1" }}>
+                {m.hasImage ? (
+                  <>
+                    <img
+                      src={imgSrc}
+                      alt={`${m.name}${m.hasFrontBack ? (isBack ? " — back" : " — front") : ""}`}
+                      className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                    />
+                    {m.hasFrontBack && (
+                      <>
+                        <span className="absolute bottom-2.5 left-2.5 text-[10px] font-semibold text-stone-500 bg-white/80 rounded-full px-2 py-0.5">
+                          {isBack ? "Back" : "Front"}
+                        </span>
                         <button
-                          key={opt}
-                          onClick={() => selectOption(m.id, opt)}
-                          className={`px-2.5 py-1 text-xs rounded-lg border transition-all ${
-                            activeOpt === opt
-                              ? "bg-stone-900 text-white border-stone-900"
-                              : "border-stone-200 text-stone-600 hover:border-stone-400"
-                          }`}
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            setShowingBack((prev) => ({ ...prev, [m.id]: !prev[m.id] }))
+                          }}
+                          className="absolute bottom-2.5 right-2.5 bg-white/90 hover:bg-white border border-stone-200 rounded-full p-1.5 shadow-sm transition-all"
+                          title={isBack ? "Show front" : "Show back"}
                         >
-                          {opt}
+                          <ArrowsClockwiseIcon size={14} weight="bold" color="#78716c" />
                         </button>
-                      ))}
-                    </div>
+                      </>
+                    )}
+                  </>
+                ) : (
+                  <div
+                    className="w-full h-full flex items-center justify-center"
+                    style={{ background: m.gradient }}
+                  >
+                    <span className="text-5xl">{m.icon}</span>
                   </div>
                 )}
 
-                <div className="flex items-center justify-between">
-                  <span className="font-semibold text-stone-900">
-                    ${m.price}
-                  </span>
-                  <Button
-                    size="sm"
-                    variant="dark"
-                    onClick={() => handleAddToCart(m)}
-                  >
-                    Add to Cart
-                  </Button>
+              </div>
+
+              {/* Name + price */}
+              <div className="px-4 py-3 flex items-center justify-between">
+                <div>
+                  <p className="font-serif text-base text-stone-900 group-hover:text-amber-700 transition-colors">{m.name}</p>
+                  {(() => {
+                    const cartQty = items.filter((i) => i.id === m.id).reduce((sum, i) => sum + i.qty, 0)
+                    return cartQty > 0 ? (
+                      <p className="text-[10px] text-amber-700 font-medium mt-0.5">{cartQty} in cart</p>
+                    ) : null
+                  })()}
                 </div>
+                <p className="text-sm font-semibold text-stone-600">${m.price}</p>
               </div>
             </div>
           )
         })}
       </div>
+
+      <MerchModal product={selected} onClose={() => setSelected(null)} />
 
       <div
         className="mt-12 text-center relative rounded-2xl shadow-sm overflow-hidden p-10"
@@ -143,23 +110,13 @@ export function MerchPageClient({ merch }: { merch: Merch[] }) {
           }}
         />
         <div className="relative">
-          <GiftIcon
-            size={40}
-            weight="duotone"
-            color="#CC9818"
-            className="mb-3 mx-auto block"
-          />
-          <h3 className="font-serif text-xl text-stone-900 mb-2">
-            Looking for a gift?
-          </h3>
+          <GiftIcon size={40} weight="duotone" color="#CC9818" className="mb-3 mx-auto block" />
+          <h3 className="font-serif text-xl text-stone-900 mb-2">Looking for a gift?</h3>
           <p className="text-stone-500 text-sm max-w-md mx-auto mb-6">
-            Pair any merch item with a coffee subscription or e-gift card — the
-            perfect bundle for any coffee lover.
+            Pair any merch item with a coffee subscription or e-gift card — the perfect bundle for
+            any coffee lover.
           </p>
-          <Button
-            variant="outline"
-            onClick={() => router.push("/shop/gift-cards")}
-          >
+          <Button variant="outline" onClick={() => router.push("/shop/gift-cards")}>
             Shop Gift Cards
           </Button>
         </div>

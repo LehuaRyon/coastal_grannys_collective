@@ -18,6 +18,11 @@ interface CartStore {
   count: () => number;
 }
 
+let autoCloseTimer: ReturnType<typeof setTimeout> | null = null;
+function clearAutoClose() {
+  if (autoCloseTimer) { clearTimeout(autoCloseTimer); autoCloseTimer = null; }
+}
+
 export const useCartStore = create<CartStore>()(
   persist(
     (set, get) => ({
@@ -36,6 +41,9 @@ export const useCartStore = create<CartStore>()(
           }
           return { items: [...state.items, { ...newItem, qty: 1 }] };
         });
+        clearAutoClose();
+        set({ isOpen: true });
+        autoCloseTimer = setTimeout(() => { set({ isOpen: false }); autoCloseTimer = null; }, 2500);
       },
 
       removeItem: (key) => {
@@ -52,9 +60,9 @@ export const useCartStore = create<CartStore>()(
 
       clearCart: () => set({ items: [] }),
 
-      openCart: () => set({ isOpen: true }),
-      closeCart: () => set({ isOpen: false }),
-      toggleCart: () => set((state) => ({ isOpen: !state.isOpen })),
+      openCart: () => { clearAutoClose(); set({ isOpen: true }); },
+      closeCart: () => { clearAutoClose(); set({ isOpen: false }); },
+      toggleCart: () => { clearAutoClose(); set((state) => ({ isOpen: !state.isOpen })); },
 
       total: () => get().items.reduce((sum, i) => sum + i.price * i.qty, 0),
       count: () => get().items.reduce((sum, i) => sum + i.qty, 0),
