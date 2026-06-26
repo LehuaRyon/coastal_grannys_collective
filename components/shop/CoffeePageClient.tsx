@@ -10,9 +10,48 @@ import { useMemo, useState } from "react"
 const ROAST_FILTERS: { label: string; value: RoastFilter }[] = [
   { label: "All Roasts", value: "all" },
   { label: "Light", value: "light" },
+  { label: "Light-Medium", value: "light-medium" },
   { label: "Medium", value: "medium" },
   { label: "Medium-Dark", value: "medium-dark" },
   { label: "Dark", value: "dark" },
+]
+
+const ROAST_BG: Record<string, string> = {
+  light:         '#C8941A',
+  'light-medium': '#A0721A',
+  medium:        '#7A5020',
+  'medium-dark': '#50321A',
+  dark:          '#2A1810',
+}
+
+const FLAVOR_FAMILIES: { label: string; notes: string[]; isAll?: boolean }[] = [
+  { label: "All Flavors", notes: [], isAll: true },
+  { label: "Fruity", notes: ["cherry", "cherry cola", "raspberry", "sangria", "mango", "pineapple", "tropical", "tropical fruit", "stone fruit", "melon", "jolly rancher", "watermelon", "berry", "grape", "blueberry", "strawberry", "peach", "apricot", "lychee", "passion fruit", "bright", "citrus", "lime", "orange"] },
+  { label: "Chocolate", notes: ["chocolate", "dark chocolate", "baker's chocolate", "cocoa", "milk chocolate", "toffee", "brownie"] },
+  { label: "Sweet", notes: ["caramel", "brown sugar", "honey", "vanilla", "candy", "butterscotch", "molasses", "maple", "sugar cane", "toffee"] },
+  { label: "Floral", notes: ["florals", "floral", "jasmine", "lavender", "white tea", "rose", "hibiscus", "honeysuckle", "bergamot", "hops"] },
+  { label: "Nutty", notes: ["nutty", "nuttiness", "almond", "hazelnut", "walnut", "pecan", "peanut"] },
+  { label: "Spiced", notes: ["baking spices", "spice", "cinnamon", "clove", "cardamom", "black pepper", "ginger"] },
+  { label: "Earthy", notes: ["earthy", "tobacco", "cedar", "leather", "woody", "herbaceous"] },
+]
+
+type SortBy = "default" | "best-selling" | "name-asc" | "name-desc" | "price-asc" | "price-desc"
+type BadgeFilter = "all" | "staff-pick" | "limited" | "featured"
+
+const SORT_OPTIONS: { label: string; value: SortBy }[] = [
+  { label: "Default", value: "default" },
+  { label: "Best Selling", value: "best-selling" },
+  { label: "A → Z", value: "name-asc" },
+  { label: "Z → A", value: "name-desc" },
+  { label: "Price: Low → High", value: "price-asc" },
+  { label: "Price: High → Low", value: "price-desc" },
+]
+
+const BADGE_OPTIONS: { label: string; value: BadgeFilter }[] = [
+  { label: "All Badges", value: "all" },
+  { label: "Staff Pick", value: "staff-pick" },
+  { label: "Limited", value: "limited" },
+  { label: "Featured", value: "featured" },
 ]
 
 function originToCountry(origin: string): string {
@@ -24,9 +63,10 @@ export function CoffeePageClient({ coffees }: { coffees: Coffee[] }) {
   const router = useRouter()
   const [roastFilter, setRoastFilter] = useState<RoastFilter>("all")
   const [originFilter, setOriginFilter] = useState<string>("all")
-  const [selectedNotes, setSelectedNotes] = useState<Set<string>>(new Set())
+  const [selectedFamilies, setSelectedFamilies] = useState<Set<string>>(new Set())
   const [stockFilter, setStockFilter] = useState<"in" | "out" | "all">("in")
-  const [priceSort, setPriceSort] = useState<"none" | "asc" | "desc">("none")
+  const [sortBy, setSortBy] = useState<SortBy>("default")
+  const [badgeFilter, setBadgeFilter] = useState<BadgeFilter>("all")
   const [selectedProduct, setSelectedProduct] = useState<Coffee | null>(null)
 
   const countries = useMemo(() => {
@@ -35,60 +75,82 @@ export function CoffeePageClient({ coffees }: { coffees: Coffee[] }) {
     return Array.from(set).sort()
   }, [coffees])
 
-  const allNotes = useMemo(() => {
-    const set = new Set<string>()
-    for (const c of coffees) for (const n of c.notes) set.add(n.toLowerCase())
-    return Array.from(set).sort()
-  }, [coffees])
-
   function lowestPrice(c: Coffee) {
     return Math.min(...Object.values(c.prices))
+  }
+
+  function coffeeMatchesFamily(coffee: Coffee, family: string): boolean {
+    const f = FLAVOR_FAMILIES.find((f) => f.label === family)
+    if (!f) return false
+    const coffeeNotes = coffee.notes.map((n) => n.toLowerCase())
+    return f.notes.some((n) => coffeeNotes.some((cn) => cn.includes(n) || n.includes(cn)))
+  }
+
+  function toggleFamily(family: string) {
+    if (family === "All Flavors") {
+      setSelectedFamilies(new Set())
+      return
+    }
+    setSelectedFamilies((prev) => {
+      const next = new Set(prev)
+      if (next.has(family)) next.delete(family)
+      else next.add(family)
+      return next
+    })
   }
 
   const filtered = coffees
     .filter((c) => {
       if (stockFilter === "in" && !c.inStock) return false
       if (stockFilter === "out" && c.inStock) return false
-      if (roastFilter !== "all" && c.roast.toLowerCase() !== roastFilter)
-        return false
-      if (originFilter !== "all" && originToCountry(c.origin) !== originFilter)
-        return false
-      if (selectedNotes.size > 0) {
-        const coffeeNotes = c.notes.map((n) => n.toLowerCase())
-        if (!Array.from(selectedNotes).some((n) => coffeeNotes.includes(n)))
-          return false
+      if (roastFilter !== "all" && c.roast.toLowerCase().replace(" ", "-") !== roastFilter) return false
+      if (originFilter !== "all" && originToCountry(c.origin) !== originFilter) return false
+      if (selectedFamilies.size > 0) {
+        if (!Array.from(selectedFamilies).some((f) => coffeeMatchesFamily(c, f))) return false
       }
+      if (badgeFilter === "staff-pick" && c.badge !== "Staff Pick") return false
+      if (badgeFilter === "limited" && c.badge !== "Limited") return false
+      if (badgeFilter === "featured" && !c.featured) return false
       return true
     })
     .sort((a, b) => {
-      if (priceSort === "asc") return lowestPrice(a) - lowestPrice(b)
-      if (priceSort === "desc") return lowestPrice(b) - lowestPrice(a)
-      return 0
+      if (sortBy === "best-selling") return b.salesRank - a.salesRank
+      if (sortBy === "name-asc") return a.name.localeCompare(b.name)
+      if (sortBy === "name-desc") return b.name.localeCompare(a.name)
+      if (sortBy === "price-asc") return lowestPrice(a) - lowestPrice(b)
+      if (sortBy === "price-desc") return lowestPrice(b) - lowestPrice(a)
+      return 0 // "default" = position order from DB
     })
-
-  function toggleNote(note: string) {
-    setSelectedNotes((prev) => {
-      const next = new Set(prev)
-      if (next.has(note)) next.delete(note)
-      else next.add(note)
-      return next
-    })
-  }
 
   function resetFilters() {
     setRoastFilter("all")
     setOriginFilter("all")
-    setSelectedNotes(new Set())
+    setSelectedFamilies(new Set())
     setStockFilter("in")
-    setPriceSort("none")
+    setSortBy("default")
+    setBadgeFilter("all")
   }
 
   const hasActiveFilters =
     roastFilter !== "all" ||
     originFilter !== "all" ||
-    selectedNotes.size > 0 ||
+    selectedFamilies.size > 0 ||
     stockFilter !== "in" ||
-    priceSort !== "none"
+    (sortBy !== "default" && sortBy !== "best-selling") ||
+    badgeFilter !== "all"
+
+  const filterBtn = (active: boolean, color: "stone" | "amber" | "green") => {
+    const activeClasses = {
+      stone: "bg-stone-900 text-white",
+      amber: "bg-amber-700 text-white",
+      green: "text-white",
+    }
+    return `px-4 py-1.5 rounded-full text-xs font-medium transition-all ${
+      active
+        ? activeClasses[color]
+        : "bg-stone-100 text-stone-600 hover:bg-stone-200"
+    }`
+  }
 
   return (
     <>
@@ -158,173 +220,154 @@ export function CoffeePageClient({ coffees }: { coffees: Coffee[] }) {
 
         {/* Filter bar */}
         <div className="space-y-3 mb-8">
-          {/* Roast */}
-          <div className="flex flex-wrap gap-2 items-center">
-            <span className="text-xs font-semibold text-stone-400 uppercase tracking-wide w-14 flex-shrink-0">
-              Roast
-            </span>
-            {ROAST_FILTERS.map((f) => (
-              <button
-                key={f.value}
-                onClick={() => setRoastFilter(f.value)}
-                className={`px-4 py-1.5 rounded-full text-xs font-medium transition-all ${
-                  roastFilter === f.value
-                    ? "bg-stone-900 text-white"
-                    : "bg-stone-100 text-stone-600 hover:bg-stone-200"
-                }`}
-              >
-                {f.label}
-              </button>
-            ))}
-          </div>
 
-          {/* Origin */}
-          {countries.length > 1 && (
-            <div className="flex flex-wrap gap-2 items-center">
-              <span className="text-xs font-semibold text-stone-400 uppercase tracking-wide w-14 flex-shrink-0">
-                Origin
-              </span>
-              <button
-                onClick={() => setOriginFilter("all")}
-                className={`px-4 py-1.5 rounded-full text-xs font-medium transition-all ${
-                  originFilter === "all"
-                    ? "bg-amber-700 text-white"
-                    : "bg-stone-100 text-stone-600 hover:bg-stone-200"
-                }`}
-              >
-                All Origins
-              </button>
-              {countries.map((country) => (
-                <button
-                  key={country}
-                  onClick={() => setOriginFilter(country)}
-                  className={`px-4 py-1.5 rounded-full text-xs font-medium transition-all ${
-                    originFilter === country
-                      ? "bg-amber-700 text-white"
-                      : "bg-stone-100 text-stone-600 hover:bg-stone-200"
-                  }`}
-                >
-                  {country}
-                </button>
-              ))}
-            </div>
-          )}
-
-          {/* Tasting notes — multi-select, single scrollable row */}
-          {allNotes.length > 0 && (
-            <div className="flex items-center gap-2">
-              <span className="text-xs font-semibold text-stone-400 uppercase tracking-wide w-14 flex-shrink-0">
-                Notes
-              </span>
-              <div className="flex gap-2 overflow-x-auto pb-0.5 scrollbar-hide">
-                {allNotes.map((note) => {
-                  const active = selectedNotes.has(note)
-                  return (
-                    <button
-                      key={note}
-                      onClick={() => toggleNote(note)}
-                      className={`px-4 py-1.5 rounded-full text-xs font-medium capitalize transition-all whitespace-nowrap flex-shrink-0 ${
-                        active ? "text-white" : "bg-stone-100 text-stone-600 hover:bg-stone-200"
-                      }`}
-                      style={active ? { backgroundColor: '#6B7A4A' } : undefined}
-                    >
-                      {note}
-                    </button>
-                  )
-                })}
-              </div>
-            </div>
-          )}
-
-          {/* Price sort */}
-          <div className="flex flex-wrap gap-2 items-center">
-            <span className="text-xs font-semibold text-stone-400 uppercase tracking-wide w-14 flex-shrink-0">
-              Price
-            </span>
+          {/* Stock */}
+          <div className="flex gap-2 items-center overflow-x-auto pb-0.5 scrollbar-hide">
+            <span className="text-xs font-semibold text-stone-400 uppercase tracking-wide w-14 flex-shrink-0">Stock</span>
             {(
               [
-                { value: "none", label: "Default" },
-                { value: "asc", label: "Low → High" },
-                { value: "desc", label: "High → Low" },
+                { value: "in", label: "In Stock", style: { backgroundColor: "#6B7A4A" } },
+                { value: "out", label: "Out of Stock", style: { backgroundColor: "#9A5858" } },
+                { value: "all", label: "All", style: undefined },
               ] as const
-            ).map(({ value, label }) => (
-              <button
-                key={value}
-                onClick={() => setPriceSort(value)}
-                className={`px-4 py-1.5 rounded-full text-xs font-medium transition-all ${
-                  priceSort === value
-                    ? "bg-stone-900 text-white"
-                    : "bg-stone-100 text-stone-600 hover:bg-stone-200"
-                }`}
-              >
-                {label}
-              </button>
-            ))}
-          </div>
-
-          {/* Availability — three-way */}
-          <div className="flex flex-wrap gap-2 items-center">
-            <span className="text-xs font-semibold text-stone-400 uppercase tracking-wide w-14 flex-shrink-0">
-              Stock
-            </span>
-            {(
-              [
-                { value: "in", label: "In Stock", cls: "", style: { backgroundColor: '#6B7A4A' } },
-                { value: "out", label: "Out of Stock", cls: "", style: { backgroundColor: '#9A5858' } },
-                { value: "all", label: "All", cls: "bg-stone-900", style: undefined },
-              ] as const
-            ).map(({ value, label, cls, style }) => (
+            ).map(({ value, label, style }) => (
               <button
                 key={value}
                 onClick={() => setStockFilter(value)}
                 className={`px-4 py-1.5 rounded-full text-xs font-medium transition-all ${
-                  stockFilter === value
-                    ? `${cls} text-white`
-                    : "bg-stone-100 text-stone-600 hover:bg-stone-200"
+                  stockFilter === value ? "text-white" : "bg-stone-100 text-stone-600 hover:bg-stone-200"
                 }`}
-                style={stockFilter === value ? style : undefined}
+                style={stockFilter === value ? style ?? { backgroundColor: "#1c1917" } : undefined}
               >
                 {label}
               </button>
             ))}
             {hasActiveFilters && (
-              <button
-                onClick={resetFilters}
-                className="ml-2 text-xs text-stone-400 hover:text-stone-700 underline transition-colors"
-              >
+              <button onClick={resetFilters} className="ml-2 text-xs text-stone-400 hover:text-stone-700 underline transition-colors">
                 Reset
               </button>
             )}
           </div>
+
+          {/* Roast */}
+          <div className="flex gap-2 items-center overflow-x-auto pb-0.5 scrollbar-hide">
+            <span className="text-xs font-semibold text-stone-400 uppercase tracking-wide w-14 flex-shrink-0">Roast</span>
+            {ROAST_FILTERS.map((f) => {
+              const active = roastFilter === f.value
+              const roastColor = ROAST_BG[f.value]
+              return (
+                <button
+                  key={f.value}
+                  onClick={() => setRoastFilter(f.value)}
+                  className={`px-4 py-1.5 rounded-full text-xs font-medium transition-all flex-shrink-0 ${
+                    active
+                      ? roastColor
+                        ? 'text-white'
+                        : 'bg-stone-900 text-white'
+                      : 'bg-stone-100 text-stone-600 hover:bg-stone-200'
+                  }`}
+                  style={active && roastColor ? { backgroundColor: roastColor } : undefined}
+                >
+                  {f.label}
+                </button>
+              )
+            })}
+          </div>
+
+          {/* Origin */}
+          {countries.length > 1 && (
+            <div className="flex gap-2 items-center overflow-x-auto pb-0.5 scrollbar-hide">
+              <span className="text-xs font-semibold text-stone-400 uppercase tracking-wide w-14 flex-shrink-0">Origin</span>
+              {(["all", ...countries] as string[]).map((country) => {
+                const active = originFilter === country
+                return (
+                  <button
+                    key={country}
+                    onClick={() => setOriginFilter(country)}
+                    className={`px-4 py-1.5 rounded-full text-xs font-medium transition-all flex-shrink-0 ${
+                      active ? "text-white" : "bg-stone-100 text-stone-600 hover:bg-stone-200"
+                    }`}
+                    style={active ? { backgroundColor: "#6B7A4A" } : undefined}
+                  >
+                    {country === "all" ? "All Origins" : country}
+                  </button>
+                )
+              })}
+            </div>
+          )}
+
+          {/* Badge */}
+          <div className="flex gap-2 items-center overflow-x-auto pb-0.5 scrollbar-hide">
+            <span className="text-xs font-semibold text-stone-400 uppercase tracking-wide w-14 flex-shrink-0">Badge</span>
+            {BADGE_OPTIONS.map(({ label, value }) => (
+              <button
+                key={value}
+                onClick={() => setBadgeFilter(value)}
+                className={`px-4 py-1.5 rounded-full text-xs font-medium transition-all flex-shrink-0 ${
+                  badgeFilter === value
+                    ? value === "staff-pick"
+                      ? "text-stone-900 font-semibold"
+                      : value === "limited"
+                      ? "bg-red-600 text-white"
+                      : "bg-stone-900 text-white"
+                    : "bg-stone-100 text-stone-600 hover:bg-stone-200"
+                }`}
+                style={badgeFilter === value && value === "staff-pick" ? { backgroundColor: "#CC9818" } : undefined}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+
+          {/* Flavor families */}
+          <div className="flex gap-2 items-center overflow-x-auto pb-0.5 scrollbar-hide">
+            <span className="text-xs font-semibold text-stone-400 uppercase tracking-wide w-14 flex-shrink-0">Flavor</span>
+            {FLAVOR_FAMILIES.map(({ label, isAll }) => {
+              const active = isAll ? selectedFamilies.size === 0 : selectedFamilies.has(label)
+              return (
+                <button
+                  key={label}
+                  onClick={() => toggleFamily(label)}
+                  className={`px-4 py-1.5 rounded-full text-xs font-medium transition-all flex-shrink-0 ${
+                    active ? "text-white" : "bg-stone-100 text-stone-600 hover:bg-stone-200"
+                  }`}
+                  style={active ? { backgroundColor: "#6B7A4A" } : undefined}
+                >
+                  {label}
+                </button>
+              )
+            })}
+          </div>
+
+          {/* Sort */}
+          <div className="flex gap-2 items-center overflow-x-auto pb-0.5 scrollbar-hide">
+            <span className="text-xs font-semibold text-stone-400 uppercase tracking-wide w-14 flex-shrink-0">Sort</span>
+            {SORT_OPTIONS.map(({ label, value }) => (
+              <button key={value} onClick={() => setSortBy(value)} className={`${filterBtn(sortBy === value, "stone")} flex-shrink-0`}>
+                {label}
+              </button>
+            ))}
+          </div>
+
         </div>
 
         {filtered.length === 0 ? (
           <div className="text-center py-16 text-stone-400">
             <p className="mb-3">No coffees match those filters.</p>
-            <button
-              onClick={resetFilters}
-              className="text-sm text-amber-700 hover:underline"
-            >
+            <button onClick={resetFilters} className="text-sm text-amber-700 hover:underline">
               Reset filters
             </button>
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
             {filtered.map((coffee) => (
-              <CoffeeCard
-                key={coffee.id}
-                coffee={coffee}
-                onViewDetails={setSelectedProduct}
-              />
+              <CoffeeCard key={coffee.id} coffee={coffee} onViewDetails={setSelectedProduct} />
             ))}
           </div>
         )}
       </section>
 
-      <ProductModal
-        product={selectedProduct}
-        onClose={() => setSelectedProduct(null)}
-      />
+      <ProductModal product={selectedProduct} onClose={() => setSelectedProduct(null)} />
     </>
   )
 }

@@ -34,6 +34,7 @@ export function dbToCoffee(p: Product): Coffee {
     badge: p.badge ?? undefined,
     badgeClass: (p.badgeClass as Coffee['badgeClass']) ?? undefined,
     hasImage: productImageExists(p.slug),
+    salesRank: p.salesRank,
   };
 }
 

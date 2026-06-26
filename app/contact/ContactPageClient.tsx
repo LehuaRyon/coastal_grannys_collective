@@ -51,9 +51,11 @@ export default function ContactPageClient({ details }: { details: Details }) {
             Get in Touch
           </p>
           <h1 className="font-serif text-4xl text-stone-900 mb-4">{details.heading}</h1>
-          <p className="text-stone-500 text-sm leading-relaxed mb-8 max-w-sm">
-            {details.subheading}
-          </p>
+          <div className="text-stone-500 text-sm leading-relaxed mb-8 max-w-sm space-y-3">
+            {details.subheading.split('\n\n').map((p, i) => (
+              <p key={i}>{p}</p>
+            ))}
+          </div>
 
           <div className="space-y-5">
             {contactItems.map((d) => (

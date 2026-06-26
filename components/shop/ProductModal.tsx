@@ -15,9 +15,25 @@ interface ProductModalProps {
 
 const ROAST_LEVELS = ['Light', 'Light-Medium', 'Medium', 'Medium-Dark', 'Dark'] as const;
 
+const SIZE_FILL: Record<string, number> = {
+  '8 oz / ½ lb':  50,
+  '12 oz / ¾ lb': 75,
+  '16 oz / 1 lb': 100,
+};
+
+const ROAST_BG: Record<string, string> = {
+  'Light':        '#C8941A',
+  'Light-Medium': '#A0721A',
+  'Medium':       '#7A5020',
+  'Medium-Dark':  '#50321A',
+  'Dark':         '#2A1810',
+};
+
 function sizeToLbs(s: string): number {
-  if (s.startsWith('½')) return 0.5;
-  return parseFloat(s);
+  if (s.includes('½')) return 0.5;
+  if (s.includes('¾')) return 0.75;
+  const m = s.match(/(\d+(?:\.\d+)?)\s*lb/);
+  return m ? parseFloat(m[1]) : 0;
 }
 
 export function ProductModal({ product, onClose }: ProductModalProps) {
@@ -38,7 +54,7 @@ export function ProductModal({ product, onClose }: ProductModalProps) {
   const sizes = product
     ? Object.entries(product.prices).sort((a, b) => sizeToLbs(b[0]) - sizeToLbs(a[0]))
     : [];
-  const activeSize = selectedSize ?? '1 lb';
+  const activeSize = selectedSize ?? '16 oz / 1 lb';
   const activePrice = product && activeSize ? product.prices[activeSize] : 0;
 
   // Roast: default to the coffee's recommended roast
@@ -63,9 +79,9 @@ export function ProductModal({ product, onClose }: ProductModalProps) {
   }
 
   return (
-    <Modal isOpen={!!product} onClose={onClose} className="max-w-4xl">
+    <Modal isOpen={!!product} onClose={onClose} className="max-w-5xl">
       {product && (
-        <div className="grid md:grid-cols-2">
+        <div className="grid md:grid-cols-[2fr_3fr]">
           {/* Image */}
           <div
             className={`flex flex-col items-center justify-center p-10 rounded-t-2xl md:rounded-l-2xl md:rounded-tr-none min-h-48 relative overflow-hidden ${!product.inStock ? 'opacity-70' : ''}`}
@@ -141,13 +157,22 @@ export function ProductModal({ product, onClose }: ProductModalProps) {
                     <button
                       key={sz}
                       onClick={() => setSelectedSize(sz)}
-                      className={`px-3 py-2 rounded-lg text-sm border transition-all ${
+                      className={`relative px-3 py-2 rounded-lg text-sm border overflow-hidden transition-all ${
                         activeSize === sz
-                          ? 'border-stone-900 bg-stone-900 text-white'
-                          : 'border-stone-200 text-stone-700 hover:border-stone-400'
+                          ? 'border-amber-600 text-stone-900 font-medium ring-2 ring-amber-400 ring-offset-1'
+                          : 'border-stone-200 text-stone-700 hover:border-amber-400'
                       }`}
                     >
-                      {sz} — ${pr}
+                      <span
+                        className="absolute bottom-0 left-0 right-0 transition-all duration-300"
+                        style={{
+                          height: `${SIZE_FILL[sz] ?? 100}%`,
+                          backgroundColor: activeSize === sz
+                            ? 'rgba(200, 148, 26, 0.22)'
+                            : 'rgba(200, 148, 26, 0.09)',
+                        }}
+                      />
+                      <span className="relative">{sz} — ${pr}</span>
                     </button>
                   ))}
                 </div>
@@ -161,11 +186,12 @@ export function ProductModal({ product, onClose }: ProductModalProps) {
                     <button
                       key={roast}
                       onClick={() => setSelectedRoast(roast)}
-                      className={`px-3 py-2 rounded-lg text-sm border transition-all ${
+                      className={`px-3 py-2 rounded-lg text-sm text-white font-medium transition-all ${
                         activeRoast === roast
-                          ? 'border-amber-600 bg-amber-600 text-white'
-                          : 'border-stone-200 text-stone-700 hover:border-amber-400'
+                          ? 'ring-2 ring-amber-400 ring-offset-1 opacity-100'
+                          : 'opacity-70 hover:opacity-100'
                       }`}
+                      style={{ backgroundColor: ROAST_BG[roast] }}
                     >
                       {roast}
                     </button>

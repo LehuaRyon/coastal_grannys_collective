@@ -15,7 +15,7 @@ export function Footer() {
               </span>
             </Link>
             <p className="text-sm text-white/70 leading-relaxed max-w-xs">
-              Micro-batch specialty coffee roasted on demand in San Diego, CA. Experimental co-ferments and rare single-origins by Ryan &amp; Kelly McLaughlin.
+              Micro-batch specialty coffee and a mobile café roasted and run by Ryan &amp; Kelly McLaughlin in San Diego, CA. Experimental co-ferments, rare single-origins, and matcha at your next event.
             </p>
             <div className="flex gap-3 mt-6">
               <a
@@ -76,14 +76,22 @@ export function Footer() {
           <div>
             <h4 className="text-white font-semibold text-sm mb-4">Help</h4>
             <div className="space-y-2.5">
-              {['Shipping Info', 'Returns & Refunds', 'Brewing Guides', 'FAQ'].map((label) => (
-                <span
-                  key={label}
-                  className="block text-sm text-white/70 hover:text-white transition-colors cursor-pointer"
-                >
-                  {label}
-                </span>
-              ))}
+              {[
+                { label: 'Shipping Info', href: '/policies/shipping' },
+                { label: 'Returns & Refunds', href: '/policies/returns' },
+                { label: 'Brewing Guides', href: '/brewing-guides' },
+                { label: 'FAQ', href: '/faq' },
+              ].map(({ label, href }) =>
+                href ? (
+                  <Link key={label} href={href} className="block text-sm text-white/70 hover:text-white transition-colors">
+                    {label}
+                  </Link>
+                ) : (
+                  <span key={label} className="block text-sm text-white/70 cursor-pointer">
+                    {label}
+                  </span>
+                )
+              )}
             </div>
           </div>
         </div>

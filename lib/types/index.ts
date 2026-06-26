@@ -18,6 +18,7 @@ export interface Coffee {
   badge?: string;
   badgeClass?: 'badge-gold' | 'badge-red';
   hasImage?: boolean;
+  salesRank: number;
 }
 
 export interface Subscription {
@@ -58,4 +59,4 @@ export interface CartItem {
   qty: number;
 }
 
-export type RoastFilter = 'all' | 'light' | 'medium' | 'medium-dark' | 'dark';
+export type RoastFilter = 'all' | 'light' | 'light-medium' | 'medium' | 'medium-dark' | 'dark';
