@@ -1,3 +1,4 @@
+import { Suspense } from 'react';
 import { prisma } from '@/lib/db';
 import { dbToCoffee } from '@/lib/data/db-products';
 import { CoffeePageClient } from '@/components/shop/CoffeePageClient';
@@ -14,5 +15,9 @@ export default async function CoffeePage() {
   } catch {
     coffees = COFFEES;
   }
-  return <CoffeePageClient coffees={coffees} />;
+  return (
+    <Suspense>
+      <CoffeePageClient coffees={coffees} />
+    </Suspense>
+  );
 }

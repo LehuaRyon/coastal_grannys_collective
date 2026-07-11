@@ -5,8 +5,8 @@ import { ProductModal } from "@/components/shop/ProductModal"
 import { Button } from "@/components/ui/Button"
 import { Reveal } from "@/components/ui/Reveal"
 import type { Coffee, RoastFilter } from "@/lib/types"
-import { useRouter } from "next/navigation"
-import { useMemo, useState } from "react"
+import { useRouter, useSearchParams } from "next/navigation"
+import { useEffect, useMemo, useState } from "react"
 
 const ROAST_FILTERS: { label: string; value: RoastFilter }[] = [
   { label: "All Roasts", value: "all" },
@@ -62,6 +62,7 @@ function originToCountry(origin: string): string {
 
 export function CoffeePageClient({ coffees }: { coffees: Coffee[] }) {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const [roastFilter, setRoastFilter] = useState<RoastFilter>("all")
   const [originFilter, setOriginFilter] = useState<string>("all")
   const [selectedFamilies, setSelectedFamilies] = useState<Set<string>>(new Set())
@@ -69,6 +70,15 @@ export function CoffeePageClient({ coffees }: { coffees: Coffee[] }) {
   const [sortBy, setSortBy] = useState<SortBy>("default")
   const [badgeFilter, setBadgeFilter] = useState<BadgeFilter>("all")
   const [selectedProduct, setSelectedProduct] = useState<Coffee | null>(null)
+
+  // Deep-link support: /shop/coffee?product=<slug> opens that coffee's modal on load
+  useEffect(() => {
+    const slug = searchParams.get("product")
+    if (!slug) return
+    const match = coffees.find((c) => c.slug === slug)
+    if (match) setSelectedProduct(match)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   const countries = useMemo(() => {
     const set = new Set<string>()
@@ -385,7 +395,12 @@ export function CoffeePageClient({ coffees }: { coffees: Coffee[] }) {
 
       <ProductModal
         product={selectedProduct}
-        onClose={() => setSelectedProduct(null)}
+        onClose={() => {
+          setSelectedProduct(null)
+          if (searchParams.get("product")) {
+            router.replace("/shop/coffee", { scroll: false })
+          }
+        }}
         onPrev={goToPrevProduct}
         onNext={goToNextProduct}
         hasPrev={hasPrev}

@@ -23,7 +23,7 @@ export function FeaturedCoffeeCard({ slug, name, subtitle, origin, notes, prices
 
   return (
     <Link
-      href="/shop/coffee"
+      href={`/shop/coffee?product=${slug}`}
       className="group bg-white rounded-2xl border border-stone-100 overflow-hidden hover:shadow-md transition-shadow flex flex-col h-full"
     >
       <div

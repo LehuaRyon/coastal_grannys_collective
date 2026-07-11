@@ -99,18 +99,18 @@ export function GiftCardsPageClient({
           return (
             <div
               key={amt}
-              className="relative rounded-2xl overflow-hidden cursor-pointer group"
+              className="relative rounded-2xl overflow-hidden cursor-pointer group border border-stone-100 shadow-sm hover:shadow-md hover:border-stone-200 transition-all duration-300"
               onClick={() => addGiftCard(amt)}
             >
               <div
-                className="absolute inset-0 bg-cover bg-no-repeat"
+                className="absolute inset-0 bg-cover bg-no-repeat transition-transform duration-500 group-hover:scale-105"
                 style={{
                   backgroundImage: "url(/images/values-bg.png)",
                   backgroundPosition: "center 0%",
                 }}
               />
               <div className="relative p-8 text-center">
-                <p className="text-3xl font-serif text-stone-900 mb-1">
+                <p className="text-3xl font-serif text-stone-900 mb-1 group-hover:text-amber-700 transition-colors">
                   ${amt}
                 </p>
                 <p className="text-stone-600 text-xs mb-1">E-Gift Card</p>

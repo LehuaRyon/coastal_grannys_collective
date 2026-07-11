@@ -55,7 +55,7 @@ export function SubsPageClient({
         {subscriptions.map((sub) => (
           <div
             key={sub.id}
-            className={`bg-white rounded-2xl shadow-sm border border-stone-100 overflow-hidden flex flex-col ${!sub.inStock ? "opacity-60" : ""}`}
+            className={`group bg-white rounded-2xl shadow-sm border border-stone-100 overflow-hidden flex flex-col transition-all duration-300 ${sub.inStock ? "hover:shadow-md hover:border-stone-200 hover:-translate-y-1" : "opacity-60"}`}
           >
             <div
               className="relative p-8 text-white"
