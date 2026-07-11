@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 const IMAGES = [
   { src: '/images/cart/kelly-at-cart.png', alt: "Kelly at the Coastal Granny's cart outdoors" },
@@ -18,6 +18,13 @@ export function CartCarousel() {
   function next() {
     setCurrent((i) => (i === IMAGES.length - 1 ? 0 : i + 1));
   }
+
+  // Auto-advance every 3s — resets on manual prev/next/dot navigation too,
+  // via the `current` dependency, so each slide always gets a full 3s.
+  useEffect(() => {
+    const timer = setInterval(next, 3000);
+    return () => clearInterval(timer);
+  }, [current]);
 
   return (
     <div className="relative rounded-3xl overflow-hidden shadow-xl aspect-[3/4] bg-stone-100">
