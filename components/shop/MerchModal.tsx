@@ -11,9 +11,13 @@ import { useState, useEffect } from "react"
 interface MerchModalProps {
   product: Merch | null
   onClose: () => void
+  onPrev?: () => void
+  onNext?: () => void
+  hasPrev?: boolean
+  hasNext?: boolean
 }
 
-export function MerchModal({ product: m, onClose }: MerchModalProps) {
+export function MerchModal({ product: m, onClose, onPrev, onNext, hasPrev, hasNext }: MerchModalProps) {
   const { addItem, items, updateQty, removeItem } = useCartStore()
   const [selectedSize, setSelectedSize] = useState<string | null>(null)
   const [showingBack, setShowingBack] = useState(false)
@@ -52,8 +56,16 @@ export function MerchModal({ product: m, onClose }: MerchModalProps) {
   }
 
   return (
-    <Modal isOpen={!!m} onClose={onClose} className="max-w-5xl w-full">
-      <div className="grid md:grid-cols-[2fr_3fr] md:min-h-[520px]">
+    <Modal
+      isOpen={!!m}
+      onClose={onClose}
+      className="max-w-5xl w-full"
+      onPrev={onPrev}
+      onNext={onNext}
+      hasPrev={hasPrev}
+      hasNext={hasNext}
+    >
+      <div className="grid md:grid-cols-[2fr_3fr] md:h-[560px]">
         {/* Image */}
         <div className="relative overflow-hidden rounded-t-2xl md:rounded-l-2xl md:rounded-tr-none bg-stone-50 flex items-center justify-center min-h-64">
           {m.hasImage ? (
@@ -86,11 +98,13 @@ export function MerchModal({ product: m, onClose }: MerchModalProps) {
         </div>
 
         {/* Info */}
-        <div className="p-6 sm:p-8 flex flex-col justify-between">
+        <div className="p-6 sm:p-8 flex flex-col justify-between overflow-y-auto max-h-[80vh] md:max-h-[560px]">
           <div>
             <h2 className="font-serif text-2xl text-stone-900 mb-2">{m.name}</h2>
             <p className="text-sm text-stone-500 leading-relaxed mb-6">{m.desc}</p>
+          </div>
 
+          <div>
             {m.options && m.options.length > 0 && (
               <div className="mb-6">
                 <p className="text-[10px] font-semibold text-stone-400 uppercase tracking-wider mb-3">
@@ -113,27 +127,26 @@ export function MerchModal({ product: m, onClose }: MerchModalProps) {
                 </div>
               </div>
             )}
-          </div>
-
-          <div>
-            <div className="text-2xl font-serif text-stone-900 mb-4">${m.price}</div>
-            {cartQty > 0 && cartKey && (
-              <div className="flex items-center gap-3 mb-3">
-                <span className="text-xs font-semibold text-stone-400 uppercase tracking-wider">Quantity</span>
-                <div className="flex items-center border border-stone-200 rounded-full overflow-hidden">
-                  <button
-                    onClick={() => cartQty === 1 ? removeItem(cartKey) : updateQty(cartKey, -1)}
-                    className="w-8 h-8 flex items-center justify-center text-stone-500 hover:bg-stone-100 transition-colors"
-                  >−</button>
-                  <span className="px-3 text-sm font-semibold text-stone-900">{cartQty}</span>
-                  <button
-                    onClick={() => updateQty(cartKey, 1)}
-                    className="w-8 h-8 flex items-center justify-center text-stone-500 hover:bg-stone-100 transition-colors"
-                  >+</button>
+            <div className="flex items-center gap-6 mb-4">
+              <div className="text-2xl font-serif text-stone-900">${m.price}</div>
+              {cartQty > 0 && cartKey && (
+                <div className="flex items-center gap-3">
+                  <span className="text-xs font-semibold text-stone-400 uppercase tracking-wider">Quantity</span>
+                  <div className="flex items-center border border-stone-200 rounded-full overflow-hidden">
+                    <button
+                      onClick={() => cartQty === 1 ? removeItem(cartKey) : updateQty(cartKey, -1)}
+                      className="w-8 h-8 flex items-center justify-center text-stone-500 hover:bg-stone-100 transition-colors"
+                    >−</button>
+                    <span className="px-3 text-sm font-semibold text-stone-900">{cartQty}</span>
+                    <button
+                      onClick={() => updateQty(cartKey, 1)}
+                      className="w-8 h-8 flex items-center justify-center text-stone-500 hover:bg-stone-100 transition-colors"
+                    >+</button>
+                  </div>
+                  <span className="text-xs text-amber-700 font-medium">in cart</span>
                 </div>
-                <span className="text-xs text-amber-700 font-medium">in cart</span>
-              </div>
-            )}
+              )}
+            </div>
             <Button variant="dark" full onClick={handleAddToCart}>
               Add to Cart{activeSize ? ` — ${activeSize}` : ""}
             </Button>

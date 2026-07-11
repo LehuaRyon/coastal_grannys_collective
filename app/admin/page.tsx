@@ -1,28 +1,14 @@
-// TODO: Add a "Submissions" section to this dashboard with three tabs:
-//   • Contact — from /contact form (name, email, subject, message)
-//   • Wholesale — from /wholesale form (business name, contact, type, volume, message)
-//   • Coffee Cart — from /coffee-cart inquiry form (all event fields)
-//
-// Each tab should show a table of submissions sorted newest-first, with an
-// unread badge count on the tab. Requires:
-//   1. A Submission model in the DB: { id, type (CONTACT | WHOLESALE | CART),
-//      data (JSON), read (Boolean), createdAt }
-//   2. Each form's submit handler to POST to /api/submissions instead of (or in
-//      addition to) the mailto: fallback — save the payload to the DB
-//   3. A /api/submissions route (admin-only) to fetch and mark-as-read
-//   4. A Submissions page at /admin/submissions with a tab per form type,
-//      linked from the Quick Links grid below
-
 import Link from 'next/link';
 import { prisma } from '@/lib/db';
 
 export default async function AdminDashboard() {
-  const [totalOrders, revenueResult, recentOrders, totalUsers, totalProducts] = await Promise.all([
+  const [totalOrders, revenueResult, recentOrders, totalUsers, totalProducts, unreadSubmissions] = await Promise.all([
     prisma.order.count(),
     prisma.order.aggregate({ _sum: { amount: true }, where: { status: 'paid' } }),
     prisma.order.findMany({ orderBy: { createdAt: 'desc' }, take: 5, include: { items: true } }),
     prisma.user.count(),
     prisma.product.count({ where: { inStock: true } }),
+    prisma.submission.count({ where: { read: false } }),
   ]);
 
   const totalRevenue = revenueResult._sum.amount ?? 0;
@@ -38,6 +24,7 @@ export default async function AdminDashboard() {
     { label: 'Manage Products', desc: 'Add, edit, or remove coffees, subscriptions & merch', href: '/admin/products', icon: '📦' },
     { label: 'Edit Content', desc: 'Update homepage, about page & contact details', href: '/admin/content', icon: '✏️' },
     { label: 'View Orders', desc: 'Full order history with customer details', href: '/admin/orders', icon: '🧾' },
+    { label: 'Submissions', desc: 'Contact, wholesale & coffee cart inquiries', href: '/admin/submissions', icon: '📬' },
     { label: 'Manage Users', desc: 'Customer list and admin role management', href: '/admin/users', icon: '👥' },
   ];
 
@@ -49,13 +36,14 @@ export default async function AdminDashboard() {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-6 gap-4">
         {[
           { label: 'Total Orders', value: totalOrders.toLocaleString() },
           { label: 'Revenue', value: `$${totalRevenue.toFixed(2)}` },
           { label: 'Users', value: totalUsers.toLocaleString() },
           { label: 'Avg Order', value: totalOrders > 0 ? `$${(totalRevenue / totalOrders).toFixed(2)}` : '$0.00' },
           { label: 'Products', value: totalProducts.toLocaleString() },
+          { label: 'Unread Msgs', value: unreadSubmissions.toLocaleString() },
         ].map((stat) => (
           <div key={stat.label} className="bg-white rounded-xl border border-stone-100 p-5">
             <p className="text-xs text-stone-500 font-medium">{stat.label}</p>

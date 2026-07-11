@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation';
 import { prisma } from '@/lib/db';
 import Link from 'next/link';
 import { SignOutButton } from '@/components/auth/SignOutButton';
+import { AddressCard } from '@/components/account/AddressCard';
 
 export const metadata = { title: "My Account — Coastal Granny's Collective" };
 
@@ -20,7 +21,20 @@ export default async function AccountDashboard() {
 
   const user = await prisma.user.findUnique({
     where: { email: session.user.email },
-    select: { id: true, name: true, email: true, createdAt: true },
+    select: {
+      id: true,
+      firstName: true,
+      lastName: true,
+      email: true,
+      createdAt: true,
+      phone: true,
+      address: true,
+      apt: true,
+      city: true,
+      state: true,
+      zip: true,
+      country: true,
+    },
   });
 
   if (!user) redirect('/account/login');
@@ -58,7 +72,9 @@ export default async function AccountDashboard() {
           <div className="grid grid-cols-2 gap-4 text-sm">
             <div>
               <p className="text-stone-400 text-xs uppercase tracking-wider mb-1">Name</p>
-              <p className="text-stone-700">{user.name ?? '—'}</p>
+              <p className="text-stone-700">
+                {user.firstName || user.lastName ? `${user.firstName ?? ''} ${user.lastName ?? ''}`.trim() : '—'}
+              </p>
             </div>
             <div>
               <p className="text-stone-400 text-xs uppercase tracking-wider mb-1">Email</p>
@@ -79,6 +95,18 @@ export default async function AccountDashboard() {
             </div>
           </div>
         </div>
+
+        <AddressCard
+          profile={{
+            phone: user.phone,
+            address: user.address,
+            apt: user.apt,
+            city: user.city,
+            state: user.state,
+            zip: user.zip,
+            country: user.country,
+          }}
+        />
 
         {/* Order history */}
         <div className="bg-white rounded-2xl border border-stone-100 shadow-sm overflow-hidden">

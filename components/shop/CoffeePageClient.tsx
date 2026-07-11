@@ -122,6 +122,19 @@ export function CoffeePageClient({ coffees }: { coffees: Coffee[] }) {
       return 0 // "default" = position order from DB
     })
 
+  const selectedIndex = selectedProduct
+    ? filtered.findIndex((c) => c.id === selectedProduct.id)
+    : -1
+  const hasPrev = selectedIndex > 0
+  const hasNext = selectedIndex >= 0 && selectedIndex < filtered.length - 1
+
+  function goToPrevProduct() {
+    if (hasPrev) setSelectedProduct(filtered[selectedIndex - 1])
+  }
+  function goToNextProduct() {
+    if (hasNext) setSelectedProduct(filtered[selectedIndex + 1])
+  }
+
   function resetFilters() {
     setRoastFilter("all")
     setOriginFilter("all")
@@ -367,7 +380,14 @@ export function CoffeePageClient({ coffees }: { coffees: Coffee[] }) {
         )}
       </section>
 
-      <ProductModal product={selectedProduct} onClose={() => setSelectedProduct(null)} />
+      <ProductModal
+        product={selectedProduct}
+        onClose={() => setSelectedProduct(null)}
+        onPrev={goToPrevProduct}
+        onNext={goToNextProduct}
+        hasPrev={hasPrev}
+        hasNext={hasNext}
+      />
     </>
   )
 }

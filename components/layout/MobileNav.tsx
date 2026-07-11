@@ -34,7 +34,7 @@ export function MobileNav({ isOpen, onClose, session }: MobileNavProps) {
     };
   }, [isOpen]);
 
-  const firstName = session?.user?.name?.split(' ')[0];
+  const firstName = session?.user?.firstName;
 
   return (
     <>
@@ -72,7 +72,9 @@ export function MobileNav({ isOpen, onClose, session }: MobileNavProps) {
         {/* User info strip (logged in only) */}
         {session && (
           <div className="px-4 py-3 border-b border-stone-100 bg-stone-50">
-            <p className="text-xs font-semibold text-stone-800">{session.user.name}</p>
+            <p className="text-xs font-semibold text-stone-800">
+              {session.user.firstName} {session.user.lastName}
+            </p>
             <p className="text-xs text-stone-400 truncate">{session.user.email}</p>
           </div>
         )}

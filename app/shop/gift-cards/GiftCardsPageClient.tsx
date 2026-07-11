@@ -22,7 +22,7 @@ export function GiftCardsPageClient({
 }: {
   content: GiftCardsContent
 }) {
-  const { addItem } = useCartStore()
+  const { addItem, items } = useCartStore()
   const [customAmount, setCustomAmount] = useState("")
   const [recipientEmail, setRecipientEmail] = useState("")
   const [message, setMessage] = useState("")
@@ -85,28 +85,36 @@ export function GiftCardsPageClient({
 
       {/* Preset amounts */}
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 mb-12">
-        {content.amounts.map((amt) => (
-          <div
-            key={amt}
-            className="relative rounded-2xl overflow-hidden cursor-pointer group"
-            onClick={() => addGiftCard(amt)}
-          >
+        {content.amounts.map((amt) => {
+          const cartQty = items
+            .filter((i) => i.id === `gc-${amt}`)
+            .reduce((sum, i) => sum + i.qty, 0)
+          return (
             <div
-              className="absolute inset-0 bg-cover bg-no-repeat"
-              style={{
-                backgroundImage: "url(/images/values-bg.png)",
-                backgroundPosition: "center 0%",
-              }}
-            />
-            <div className="relative p-8 text-center">
-              <p className="text-3xl font-serif text-stone-900 mb-1">${amt}</p>
-              <p className="text-stone-600 text-xs mb-5">E-Gift Card</p>
-              <button className="w-full py-2 bg-amber-700 hover:bg-amber-600 text-white text-sm font-medium rounded-full transition-colors">
-                Add to Cart
-              </button>
+              key={amt}
+              className="relative rounded-2xl overflow-hidden cursor-pointer group"
+              onClick={() => addGiftCard(amt)}
+            >
+              <div
+                className="absolute inset-0 bg-cover bg-no-repeat"
+                style={{
+                  backgroundImage: "url(/images/values-bg.png)",
+                  backgroundPosition: "center 0%",
+                }}
+              />
+              <div className="relative p-8 text-center">
+                <p className="text-3xl font-serif text-stone-900 mb-1">${amt}</p>
+                <p className="text-stone-600 text-xs mb-1">E-Gift Card</p>
+                <p className="text-[10px] text-amber-700 font-medium mb-4 h-4">
+                  {cartQty > 0 ? `${cartQty} in cart` : ""}
+                </p>
+                <button className="w-full py-2 bg-amber-700 hover:bg-amber-600 text-white text-sm font-medium rounded-full transition-colors">
+                  Add to Cart
+                </button>
+              </div>
             </div>
-          </div>
-        ))}
+          )
+        })}
       </div>
 
       {/* Custom amount */}

@@ -14,6 +14,17 @@ export function MerchPageClient({ merch }: { merch: Merch[] }) {
   const [showingBack, setShowingBack] = useState<Record<string, boolean>>({})
   const { items } = useCartStore()
 
+  const selectedIndex = selected ? merch.findIndex((m) => m.id === selected.id) : -1
+  const hasPrev = selectedIndex > 0
+  const hasNext = selectedIndex >= 0 && selectedIndex < merch.length - 1
+
+  function goToPrevProduct() {
+    if (hasPrev) setSelected(merch[selectedIndex - 1])
+  }
+  function goToNextProduct() {
+    if (hasNext) setSelected(merch[selectedIndex + 1])
+  }
+
   return (
     <section className="max-w-7xl mx-auto px-4 sm:px-6 py-14">
       <div className="text-center mb-12">
@@ -95,7 +106,14 @@ export function MerchPageClient({ merch }: { merch: Merch[] }) {
         })}
       </div>
 
-      <MerchModal product={selected} onClose={() => setSelected(null)} />
+      <MerchModal
+        product={selected}
+        onClose={() => setSelected(null)}
+        onPrev={goToPrevProduct}
+        onNext={goToNextProduct}
+        hasPrev={hasPrev}
+        hasNext={hasNext}
+      />
 
       <div
         className="mt-12 text-center relative rounded-2xl shadow-sm overflow-hidden p-10"

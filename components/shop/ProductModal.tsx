@@ -11,6 +11,10 @@ import { CoffeeBeanIcon } from '@phosphor-icons/react';
 interface ProductModalProps {
   product: Coffee | null;
   onClose: () => void;
+  onPrev?: () => void;
+  onNext?: () => void;
+  hasPrev?: boolean;
+  hasNext?: boolean;
 }
 
 const ROAST_LEVELS = ['Light', 'Light-Medium', 'Medium', 'Medium-Dark', 'Dark'] as const;
@@ -36,7 +40,7 @@ function sizeToLbs(s: string): number {
   return m ? parseFloat(m[1]) : 0;
 }
 
-export function ProductModal({ product, onClose }: ProductModalProps) {
+export function ProductModal({ product, onClose, onPrev, onNext, hasPrev, hasNext }: ProductModalProps) {
   const { addItem, items, updateQty, removeItem } = useCartStore();
   const [selectedSize, setSelectedSize] = useState<string | null>(null);
   const [selectedRoast, setSelectedRoast] = useState<string | null>(null);
@@ -82,9 +86,17 @@ export function ProductModal({ product, onClose }: ProductModalProps) {
   }
 
   return (
-    <Modal isOpen={!!product} onClose={onClose} className="max-w-5xl">
+    <Modal
+      isOpen={!!product}
+      onClose={onClose}
+      className="max-w-5xl"
+      onPrev={onPrev}
+      onNext={onNext}
+      hasPrev={hasPrev}
+      hasNext={hasNext}
+    >
       {product && (
-        <div className="grid md:grid-cols-[2fr_3fr]">
+        <div className="grid md:grid-cols-[2fr_3fr] md:h-[740px]">
           {/* Image */}
           <div
             className={`flex flex-col items-center justify-center p-10 rounded-t-2xl md:rounded-l-2xl md:rounded-tr-none min-h-48 relative overflow-hidden ${!product.inStock ? 'opacity-70' : ''}`}
@@ -117,7 +129,7 @@ export function ProductModal({ product, onClose }: ProductModalProps) {
           </div>
 
           {/* Info */}
-          <div className="p-6 sm:p-8 overflow-y-auto max-h-[80vh]">
+          <div className="p-6 sm:p-8 overflow-y-auto max-h-[80vh] md:max-h-[740px] flex flex-col">
             <p className="text-xs text-amber-700 font-semibold uppercase tracking-widest mb-1">
               {product.origin}
             </p>
@@ -155,77 +167,82 @@ export function ProductModal({ product, onClose }: ProductModalProps) {
 
             {product.inStock ? (
               <>
-                {/* Size picker — biggest to smallest */}
-                <p className="text-[10px] font-semibold text-stone-400 uppercase tracking-wider mb-2">
-                  Select Size
-                </p>
-                <div className="flex flex-wrap gap-2 mb-4">
-                  {sizes.map(([sz, pr]) => (
-                    <button
-                      key={sz}
-                      onClick={() => setSelectedSize(sz)}
-                      className={`relative px-3 py-2 rounded-lg text-sm border overflow-hidden transition-all ${
-                        activeSize === sz
-                          ? 'border-amber-600 text-stone-900 font-medium ring-2 ring-amber-400 ring-offset-1'
-                          : 'border-stone-200 text-stone-700 hover:border-amber-400'
-                      }`}
-                    >
-                      <span
-                        className="absolute bottom-0 left-0 right-0 transition-all duration-300"
-                        style={{
-                          height: `${SIZE_FILL[sz] ?? 100}%`,
-                          backgroundColor: activeSize === sz
-                            ? 'rgba(200, 148, 26, 0.22)'
-                            : 'rgba(200, 148, 26, 0.09)',
-                        }}
-                      />
-                      <span className="relative">{sz} — ${pr}</span>
-                    </button>
-                  ))}
-                </div>
-
-                {/* Roast picker — all 5 levels, recommended pre-selected */}
-                <p className="text-[10px] font-semibold text-stone-400 uppercase tracking-wider mb-2">
-                  Select Roast Level
-                </p>
-                <div className="flex flex-wrap gap-2 mb-4">
-                  {ROAST_LEVELS.map((roast) => (
-                    <button
-                      key={roast}
-                      onClick={() => setSelectedRoast(roast)}
-                      className={`px-3 py-2 rounded-lg text-sm text-white font-medium transition-all ${
-                        activeRoast === roast
-                          ? 'ring-2 ring-amber-400 ring-offset-1 opacity-100'
-                          : 'opacity-70 hover:opacity-100'
-                      }`}
-                      style={{ backgroundColor: ROAST_BG[roast] }}
-                    >
-                      {roast}
-                    </button>
-                  ))}
-                </div>
-
-                <div className="text-2xl font-serif text-stone-900 mb-4">${activePrice}</div>
-                {cartQty > 0 && cartKey && (
-                  <div className="flex items-center gap-3 mb-3">
-                    <span className="text-xs font-semibold text-stone-400 uppercase tracking-wider">Quantity</span>
-                    <div className="flex items-center border border-stone-200 rounded-full overflow-hidden">
+                <div className="mt-auto">
+                  {/* Size picker — biggest to smallest */}
+                  <p className="text-[10px] font-semibold text-stone-400 uppercase tracking-wider mb-2">
+                    Select Size
+                  </p>
+                  <div className="flex flex-wrap gap-2 mb-4">
+                    {sizes.map(([sz, pr]) => (
                       <button
-                        onClick={() => cartQty === 1 ? removeItem(cartKey) : updateQty(cartKey, -1)}
-                        className="w-8 h-8 flex items-center justify-center text-stone-500 hover:bg-stone-100 transition-colors"
-                      >−</button>
-                      <span className="px-3 text-sm font-semibold text-stone-900">{cartQty}</span>
-                      <button
-                        onClick={() => updateQty(cartKey, 1)}
-                        className="w-8 h-8 flex items-center justify-center text-stone-500 hover:bg-stone-100 transition-colors"
-                      >+</button>
-                    </div>
-                    <span className="text-xs text-amber-700 font-medium">in cart</span>
+                        key={sz}
+                        onClick={() => setSelectedSize(sz)}
+                        className={`relative px-3 py-2 rounded-lg text-sm border overflow-hidden transition-all ${
+                          activeSize === sz
+                            ? 'border-amber-600 text-stone-900 font-medium ring-2 ring-amber-400 ring-offset-1'
+                            : 'border-stone-200 text-stone-700 hover:border-amber-400'
+                        }`}
+                      >
+                        <span
+                          className="absolute bottom-0 left-0 right-0 transition-all duration-300"
+                          style={{
+                            height: `${SIZE_FILL[sz] ?? 100}%`,
+                            backgroundColor: activeSize === sz
+                              ? 'rgba(200, 148, 26, 0.22)'
+                              : 'rgba(200, 148, 26, 0.09)',
+                          }}
+                        />
+                        <span className="relative">{sz} — ${pr}</span>
+                      </button>
+                    ))}
                   </div>
-                )}
-                <Button variant="dark" full onClick={handleAddToCart}>
-                  Add to Cart — {activeSize} · {activeRoast} Roast
-                </Button>
+
+                  {/* Roast picker — all 5 levels, recommended pre-selected */}
+                  <p className="text-[10px] font-semibold text-stone-400 uppercase tracking-wider mb-2">
+                    Select Roast Level
+                  </p>
+                  <div className="flex flex-wrap gap-2 mb-4">
+                    {ROAST_LEVELS.map((roast) => (
+                      <button
+                        key={roast}
+                        onClick={() => setSelectedRoast(roast)}
+                        className={`px-3 py-2 rounded-lg text-sm text-white font-medium transition-all ${
+                          activeRoast === roast
+                            ? 'ring-2 ring-amber-400 ring-offset-1 opacity-100'
+                            : 'opacity-70 hover:opacity-100'
+                        }`}
+                        style={{ backgroundColor: ROAST_BG[roast] }}
+                      >
+                        {roast}
+                      </button>
+                    ))}
+                  </div>
+
+                  <div className="flex items-center gap-6 mb-4">
+                    <div className="text-2xl font-serif text-stone-900">${activePrice}</div>
+                    {/* Always rendered (visibility toggled, not unmounted) so switching
+                        size/roast doesn't change this row's height and shift the CTA block,
+                        which is pinned to the bottom of the modal. */}
+                    <div className={`flex items-center gap-3 ${cartQty > 0 && cartKey ? '' : 'invisible'}`}>
+                      <span className="text-xs font-semibold text-stone-400 uppercase tracking-wider">Quantity</span>
+                      <div className="flex items-center border border-stone-200 rounded-full overflow-hidden">
+                        <button
+                          onClick={() => cartKey && (cartQty === 1 ? removeItem(cartKey) : updateQty(cartKey, -1))}
+                          className="w-8 h-8 flex items-center justify-center text-stone-500 hover:bg-stone-100 transition-colors"
+                        >−</button>
+                        <span className="px-3 text-sm font-semibold text-stone-900">{cartQty}</span>
+                        <button
+                          onClick={() => cartKey && updateQty(cartKey, 1)}
+                          className="w-8 h-8 flex items-center justify-center text-stone-500 hover:bg-stone-100 transition-colors"
+                        >+</button>
+                      </div>
+                      <span className="text-xs text-amber-700 font-medium">in cart</span>
+                    </div>
+                  </div>
+                  <Button variant="dark" full onClick={handleAddToCart}>
+                    Add to Cart — {activeSize} · {activeRoast} Roast
+                  </Button>
+                </div>
               </>
             ) : (
               <Button variant="outline" full onClick={onClose}>

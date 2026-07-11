@@ -1,10 +1,12 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useSession } from 'next-auth/react';
 import { showToast } from '@/components/ui/Toast';
 import { Button } from '@/components/ui/Button';
+import { PhoneInput } from '@/components/ui/PhoneInput';
 import Link from 'next/link';
-import { MapPinIcon, ClockIcon, EnvelopeSimpleIcon, PhoneIcon, PackageIcon, CheckCircleIcon } from '@phosphor-icons/react';
+import { MapPinIcon, ClockIcon, EnvelopeSimpleIcon, PackageIcon, CheckCircleIcon } from '@phosphor-icons/react';
 
 interface Details {
   heading: string;
@@ -16,30 +18,54 @@ interface Details {
 }
 
 export default function ContactPageClient({ details }: { details: Details }) {
+  const { data: session } = useSession();
   const [submitted, setSubmitted] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const [form, setForm] = useState({
     firstName: '',
     lastName: '',
     email: '',
+    phone: '',
     subject: 'General inquiry',
     message: '',
   });
 
-  function handleSubmit() {
+  // Prefill from the logged-in user's account, without clobbering anything they've already typed
+  useEffect(() => {
+    if (!session?.user) return;
+    setForm((f) => ({
+      ...f,
+      firstName: f.firstName || session.user.firstName || '',
+      lastName: f.lastName || session.user.lastName || '',
+      email: f.email || session.user.email || '',
+    }));
+  }, [session]);
+
+  async function handleSubmit() {
     if (!form.firstName || !form.email || !form.message) {
       showToast('Please fill in all required fields');
       return;
     }
-    // TODO: POST form data to /api/submissions with type: 'CONTACT' so it appears
-    // in the admin dashboard Submissions tab. See TODO in app/admin/page.tsx.
-    setSubmitted(true);
+    setSubmitting(true);
+    try {
+      const res = await fetch('/api/submissions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ type: 'CONTACT', data: form }),
+      });
+      if (!res.ok) throw new Error();
+      setSubmitted(true);
+    } catch {
+      showToast('Something went wrong — please try again.');
+    } finally {
+      setSubmitting(false);
+    }
   }
 
   const contactItems = [
     { icon: <MapPinIcon size={20} weight="duotone" color="#C8921A" />, label: 'Roastery', value: details.address },
     { icon: <ClockIcon size={20} weight="duotone" color="#C8921A" />, label: 'Hours', value: details.hours },
     { icon: <EnvelopeSimpleIcon size={20} weight="duotone" color="#C8921A" />, label: 'Email', value: details.email },
-    { icon: <PhoneIcon size={20} weight="duotone" color="#C8921A" />, label: 'Phone', value: details.phone },
   ];
 
   return (
@@ -125,15 +151,26 @@ export default function ContactPageClient({ details }: { details: Details }) {
                   />
                 </div>
               </div>
-              <div>
-                <label className="block text-xs font-medium text-stone-600 mb-1">Email *</label>
-                <input
-                  type="email"
-                  value={form.email}
-                  onChange={(e) => setForm({ ...form, email: e.target.value })}
-                  placeholder="jane@example.com"
-                  className="w-full border border-stone-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-amber-400 transition-colors"
-                />
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-medium text-stone-600 mb-1">Email *</label>
+                  <input
+                    type="email"
+                    value={form.email}
+                    onChange={(e) => setForm({ ...form, email: e.target.value })}
+                    placeholder="jane@example.com"
+                    className="w-full border border-stone-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-amber-400 transition-colors"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-stone-600 mb-1">Phone</label>
+                  <PhoneInput
+                    value={form.phone}
+                    onChange={(v) => setForm({ ...form, phone: v })}
+                    placeholder="(555) 000-0000"
+                    className="w-full border border-stone-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-amber-400 transition-colors"
+                  />
+                </div>
               </div>
               <div>
                 <label className="block text-xs font-medium text-stone-600 mb-1">Subject</label>
@@ -160,8 +197,8 @@ export default function ContactPageClient({ details }: { details: Details }) {
                   className="w-full border border-stone-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-amber-400 transition-colors resize-none"
                 />
               </div>
-              <Button variant="primary" full onClick={handleSubmit}>
-                Send Message →
+              <Button variant="primary" full onClick={handleSubmit} disabled={submitting}>
+                {submitting ? 'Sending…' : 'Send Message →'}
               </Button>
             </div>
           )}

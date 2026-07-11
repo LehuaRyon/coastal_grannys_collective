@@ -1,5 +1,10 @@
 'use client';
 
+// TODO: Complete Stripe business profile before going live — payments will not process until
+// the account activation requirements are finished. Visit dashboard.stripe.com to complete
+// the business profile. See stripe.com/docs/connect/required-verification-information for
+// activation requirements, or contact Stripe support.
+
 import { useState, FormEvent } from 'react';
 import { PaymentElement, useStripe, useElements } from '@stripe/react-stripe-js';
 import { Button } from '@/components/ui/Button';

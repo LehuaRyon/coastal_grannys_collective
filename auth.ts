@@ -35,7 +35,8 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
 
         return {
           id: user.id,
-          name: user.name,
+          firstName: user.firstName,
+          lastName: user.lastName,
           email: user.email,
           role: user.role,
         };
@@ -45,10 +46,21 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
 
   callbacks: {
     // Runs when JWT is created or updated — embed id and role into the token
-    jwt({ token, user }) {
+    async jwt({ token, user }) {
       if (user) {
         token.id = user.id as string;
         token.role = (user.role as string) ?? 'customer';
+        token.firstName = (user as { firstName?: string | null }).firstName ?? null;
+        token.lastName = (user as { lastName?: string | null }).lastName ?? null;
+      } else if (token.id && token.firstName === undefined) {
+        // Self-heal sessions minted before firstName/lastName were added to the JWT —
+        // avoids forcing every already-logged-in user to sign out and back in.
+        const dbUser = await prisma.user.findUnique({
+          where: { id: token.id as string },
+          select: { firstName: true, lastName: true },
+        });
+        token.firstName = dbUser?.firstName ?? null;
+        token.lastName = dbUser?.lastName ?? null;
       }
       return token;
     },
@@ -58,6 +70,8 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       if (token) {
         session.user.id = token.id as string;
         session.user.role = (token.role as string) as 'customer' | 'admin';
+        session.user.firstName = (token.firstName as string | null) ?? null;
+        session.user.lastName = (token.lastName as string | null) ?? null;
       }
       return session;
     },

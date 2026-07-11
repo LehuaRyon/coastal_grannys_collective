@@ -5,7 +5,8 @@ import { showToast } from '@/components/ui/Toast';
 
 interface User {
   id: string;
-  name: string | null;
+  firstName: string | null;
+  lastName: string | null;
   email: string;
   role: string;
   createdAt: string;
@@ -67,7 +68,9 @@ export default function AdminUsersPage() {
               <tbody className="divide-y divide-stone-50">
                 {users.map((user) => (
                   <tr key={user.id} className="hover:bg-stone-50 transition-colors">
-                    <td className="px-6 py-4 font-medium text-stone-900">{user.name ?? '—'}</td>
+                    <td className="px-6 py-4 font-medium text-stone-900">
+                      {user.firstName || user.lastName ? `${user.firstName ?? ''} ${user.lastName ?? ''}`.trim() : '—'}
+                    </td>
                     <td className="px-6 py-4 text-stone-600">{user.email}</td>
                     <td className="px-6 py-4">
                       <span className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${user.role === 'admin' ? 'bg-amber-100 text-amber-700' : 'bg-stone-100 text-stone-600'}`}>

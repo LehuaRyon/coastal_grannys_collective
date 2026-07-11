@@ -1,9 +1,11 @@
 "use client"
 
 import { Button } from "@/components/ui/Button"
+import { PhoneInput } from "@/components/ui/PhoneInput"
 import { showToast } from "@/components/ui/Toast"
 import { CheckCircleIcon } from "@phosphor-icons/react"
-import { useState } from "react"
+import { useState, useEffect } from "react"
+import { useSession } from "next-auth/react"
 
 interface WholesaleContent {
   heroTitle: string
@@ -20,7 +22,9 @@ export function WholesalePageClient({
 }: {
   content: WholesaleContent
 }) {
+  const { data: session } = useSession()
   const [submitted, setSubmitted] = useState(false)
+  const [submitting, setSubmitting] = useState(false)
   const [form, setForm] = useState({
     businessName: "",
     firstName: "",
@@ -32,14 +36,36 @@ export function WholesalePageClient({
     message: "",
   })
 
-  function handleSubmit() {
+  // Prefill from the logged-in user's account, without clobbering anything they've already typed
+  useEffect(() => {
+    if (!session?.user) return
+    setForm((f) => ({
+      ...f,
+      firstName: f.firstName || session.user.firstName || "",
+      lastName: f.lastName || session.user.lastName || "",
+      email: f.email || session.user.email || "",
+    }))
+  }, [session])
+
+  async function handleSubmit() {
     if (!form.businessName || !form.email) {
       showToast("Please fill in required fields")
       return
     }
-    // TODO: POST form data to /api/submissions with type: 'WHOLESALE' so it appears
-    // in the admin dashboard Submissions tab. See TODO in app/admin/page.tsx.
-    setSubmitted(true)
+    setSubmitting(true)
+    try {
+      const res = await fetch("/api/submissions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ type: "WHOLESALE", data: form }),
+      })
+      if (!res.ok) throw new Error()
+      setSubmitted(true)
+    } catch {
+      showToast("Something went wrong — please try again.")
+    } finally {
+      setSubmitting(false)
+    }
   }
 
   return (
@@ -190,13 +216,10 @@ export function WholesalePageClient({
                     <label className="block text-xs font-medium text-stone-600 mb-1">
                       Phone
                     </label>
-                    <input
-                      type="tel"
+                    <PhoneInput
                       value={form.phone}
-                      onChange={(e) =>
-                        setForm({ ...form, phone: e.target.value })
-                      }
-                      placeholder="+1 (555) 000-0000"
+                      onChange={(v) => setForm({ ...form, phone: v })}
+                      placeholder="(555) 000-0000"
                       className="w-full border border-stone-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-amber-400 transition-colors"
                     />
                   </div>
@@ -256,8 +279,8 @@ export function WholesalePageClient({
                     className="w-full border border-stone-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-amber-400 transition-colors resize-none"
                   />
                 </div>
-                <Button variant="primary" full onClick={handleSubmit}>
-                  Send Request →
+                <Button variant="primary" full onClick={handleSubmit} disabled={submitting}>
+                  {submitting ? "Sending…" : "Send Request →"}
                 </Button>
               </div>
             )}

@@ -1,9 +1,11 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useSession } from 'next-auth/react';
 import { Elements } from '@stripe/react-stripe-js';
 import { Modal } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
+import { PhoneInput } from '@/components/ui/PhoneInput';
 import { useCartStore } from '@/lib/store/cart';
 import { getStripe } from '@/lib/stripe';
 import { StripePaymentForm } from './StripePaymentForm';
@@ -34,6 +36,7 @@ interface CheckoutModalProps {
 const STEPS = ['Contact', 'Shipping', 'Payment'] as const;
 
 export function CheckoutModal({ isOpen, onClose }: CheckoutModalProps) {
+  const { data: session } = useSession();
   const { items, total, clearCart } = useCartStore();
   const [step, setStep] = useState<Step>(1);
 
@@ -60,6 +63,38 @@ export function CheckoutModal({ isOpen, onClose }: CheckoutModalProps) {
   const subtotal = total();
   const shippingCost = subtotal >= 60 ? 0 : 8;
   const grandTotal = subtotal + shippingCost;
+
+  // Prefill contact info from the logged-in user's session, without clobbering anything already typed
+  useEffect(() => {
+    if (!session?.user) return;
+    setContact((c) => ({
+      ...c,
+      firstName: c.firstName || session.user.firstName || '',
+      lastName: c.lastName || session.user.lastName || '',
+      email: c.email || session.user.email || '',
+    }));
+  }, [session]);
+
+  // Prefill phone + shipping address from the account's saved profile once the modal is opened
+  useEffect(() => {
+    if (!isOpen || !session?.user) return;
+    fetch('/api/account/profile')
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        const profile = data?.user;
+        if (!profile) return;
+        setContact((c) => ({ ...c, phone: c.phone || profile.phone || '' }));
+        setShipping((s) => ({
+          address: s.address || profile.address || '',
+          apt: s.apt || profile.apt || '',
+          city: s.city || profile.city || '',
+          state: s.state || profile.state || '',
+          zip: s.zip || profile.zip || '',
+          country: profile.address ? (profile.country || s.country) : s.country,
+        }));
+      })
+      .catch(() => {});
+  }, [isOpen, session]);
 
   // Create a PaymentIntent when the user reaches step 3
   useEffect(() => {
@@ -253,11 +288,10 @@ export function CheckoutModal({ isOpen, onClose }: CheckoutModalProps) {
                   <label className="block text-xs font-medium text-stone-600 mb-1">
                     Phone (optional)
                   </label>
-                  <input
-                    type="tel"
+                  <PhoneInput
                     value={contact.phone}
-                    onChange={(e) => setContact({ ...contact, phone: e.target.value })}
-                    placeholder="+1 (555) 000-0000"
+                    onChange={(v) => setContact({ ...contact, phone: v })}
+                    placeholder="(555) 000-0000"
                     className="w-full border border-stone-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-amber-400 transition-colors"
                   />
                 </div>

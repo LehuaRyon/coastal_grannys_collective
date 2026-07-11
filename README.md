@@ -1,4 +1,4 @@
-# Grounds Coffee Co. — Web Store
+# Coastal Granny's Collective — Web Store
 
 A full-featured e-commerce website for specialty coffee: browsing, filtering, subscriptions, checkout, user accounts, and a complete admin dashboard. Built with Next.js 16, TypeScript, Stripe, and PostgreSQL (Neon).
 
@@ -24,7 +24,7 @@ npm install
 ### 2. Set up the database (Neon — free PostgreSQL)
 
 1. Go to [neon.tech](https://neon.tech) and create a free account
-2. Create a new project (name it anything, e.g. "grounds-coffee")
+2. Create a new project
 3. Copy the **Connection string** from the dashboard
 
 ### 3. Set up environment variables
@@ -173,16 +173,16 @@ coffee-shop/
 
 ## Available Scripts
 
-| Command | What it does |
-|---|---|
-| `npm run dev` | Start local dev server (also runs prisma generate) |
-| `npm run build` | Generate Prisma client + build for production |
-| `npm start` | Run the production build locally |
-| `npm run lint` | Check for code quality issues |
-| `npm run db:migrate` | Run database migrations |
-| `npm run db:studio` | Open Prisma Studio — visual database browser |
-| `npm run db:seed-products` | Seed all products and default site content |
-| `npm run db:promote` | Promote a user to admin: `PROMOTE_EMAIL=you@example.com npm run db:promote` |
+| Command                    | What it does                                                                |
+| -------------------------- | --------------------------------------------------------------------------- |
+| `npm run dev`              | Start local dev server (also runs prisma generate)                          |
+| `npm run build`            | Generate Prisma client + build for production                               |
+| `npm start`                | Run the production build locally                                            |
+| `npm run lint`             | Check for code quality issues                                               |
+| `npm run db:migrate`       | Run database migrations                                                     |
+| `npm run db:studio`        | Open Prisma Studio — visual database browser                                |
+| `npm run db:seed-products` | Seed all products and default site content                                  |
+| `npm run db:promote`       | Promote a user to admin: `PROMOTE_EMAIL=you@example.com npm run db:promote` |
 
 ---
 
@@ -222,16 +222,16 @@ Visit `/admin` while logged in as admin:
 
 All products live in the `Product` table. Key fields:
 
-| Field | Used for |
-|---|---|
-| `type` | `coffee` / `subscription` / `merch` |
-| `inStock` | Shown/hidden on shop pages; out-of-stock coffees show a badge and disabled button |
-| `featured` | Coffees only — controls which appear in the homepage featured section |
-| `position` | Sort order within each type |
-| `notes` | Coffee tasting notes — drives the Notes filter on the coffee page |
-| `options` | Subscriptions: roast options shown to customer (empty = no picker); Merch: variant options |
-| `badge` / `badgeClass` | Any text badge (e.g. "Staff Pick", "Limited") — `badge-gold` (amber) or `badge-red` |
-| `prices` (JSON) | Coffee size → price map, e.g. `{"12 oz": 22, "5 lb": 85}` |
+| Field                  | Used for                                                                                   |
+| ---------------------- | ------------------------------------------------------------------------------------------ |
+| `type`                 | `coffee` / `subscription` / `merch`                                                        |
+| `inStock`              | Shown/hidden on shop pages; out-of-stock coffees show a badge and disabled button          |
+| `featured`             | Coffees only — controls which appear in the homepage featured section                      |
+| `position`             | Sort order within each type                                                                |
+| `notes`                | Coffee tasting notes — drives the Notes filter on the coffee page                          |
+| `options`              | Subscriptions: roast options shown to customer (empty = no picker); Merch: variant options |
+| `badge` / `badgeClass` | Any text badge (e.g. "Staff Pick", "Limited") — `badge-gold` (amber) or `badge-red`        |
+| `prices` (JSON)        | Coffee size → price map, e.g. `{"12 oz": 22, "5 lb": 85}`                                  |
 
 ---
 
@@ -239,12 +239,12 @@ All products live in the `Product` table. Key fields:
 
 The `/shop/coffee` page has four client-side filters:
 
-| Filter | Behavior |
-|---|---|
-| **Roast** | Single-select pills (All / Light / Medium / Medium-Dark / Dark) |
+| Filter     | Behavior                                                                                                         |
+| ---------- | ---------------------------------------------------------------------------------------------------------------- |
+| **Roast**  | Single-select pills (All / Light / Medium / Medium-Dark / Dark)                                                  |
 | **Origin** | Derived from the `origin` field — takes the last comma-separated part (e.g. "Gedeo Zone, Ethiopia" → "Ethiopia") |
-| **Notes** | Multi-select, OR logic — shows coffee if it has any selected note; single horizontally-scrollable row |
-| **Stock** | Three-way: In Stock (default) / Out of Stock / All |
+| **Notes**  | Multi-select, OR logic — shows coffee if it has any selected note; single horizontally-scrollable row            |
+| **Stock**  | Three-way: In Stock (default) / Out of Stock / All                                                               |
 
 ---
 
@@ -260,13 +260,13 @@ To show the roast picker for a subscription: go to Admin → Products → edit t
 
 The `SiteContent` table stores editable text for five pages, keyed by `page + key`:
 
-| Page | Editable fields |
-|---|---|
-| `home` | Hero title/subtitle, featured section copy, subscription CTA, brand story |
-| `about` | Hero, story paragraphs, values cards (JSON), team members (JSON) |
-| `contact` | Heading, subheading, address, hours, email, phone |
-| `wholesale` | Hero, why-partner section, perks list (JSON), form heading |
-| `gift-cards` | Heading, subheading, preset amounts (JSON), custom amount range |
+| Page         | Editable fields                                                           |
+| ------------ | ------------------------------------------------------------------------- |
+| `home`       | Hero title/subtitle, featured section copy, subscription CTA, brand story |
+| `about`      | Hero, story paragraphs, values cards (JSON), team members (JSON)          |
+| `contact`    | Heading, subheading, address, hours, email, phone                         |
+| `wholesale`  | Hero, why-partner section, perks list (JSON), form heading                |
+| `gift-cards` | Heading, subheading, preset amounts (JSON), custom amount range           |
 
 ---
 
@@ -312,6 +312,7 @@ DATABASE_URL="your-neon-connection-string" npx tsx prisma/seed-products.ts
 ### 2. Register the production webhook
 
 Stripe Dashboard → Developers → Webhooks → Add endpoint:
+
 - URL: `https://your-site.vercel.app/api/webhooks/stripe`
 - Events: `payment_intent.succeeded`, `payment_intent.payment_failed`, `charge.refunded`
 - Copy the signing secret → update `STRIPE_WEBHOOK_SECRET` in Vercel → redeploy
@@ -347,12 +348,12 @@ When you're ready to go live, swap in live Stripe keys in Vercel (not in `.env.l
 
 ### Environment summary
 
-| | Local dev | Production (Vercel) |
-|---|---|---|
-| Database | Neon dev branch | Neon main branch |
-| Stripe | Test keys (`pk_test_`, `sk_test_`) | Live keys (`pk_live_`, `sk_live_`) |
-| Stripe webhook | `stripe listen` CLI | Registered in Stripe Dashboard |
-| `AUTH_SECRET` | Any random string | `openssl rand -base64 32` |
+|                | Local dev                          | Production (Vercel)                |
+| -------------- | ---------------------------------- | ---------------------------------- |
+| Database       | Neon dev branch                    | Neon main branch                   |
+| Stripe         | Test keys (`pk_test_`, `sk_test_`) | Live keys (`pk_live_`, `sk_live_`) |
+| Stripe webhook | `stripe listen` CLI                | Registered in Stripe Dashboard     |
+| `AUTH_SECRET`  | Any random string                  | `openssl rand -base64 32`          |
 
 ---
 
@@ -365,6 +366,17 @@ When you're ready to go live, swap in live Stripe keys in Vercel (not in `.env.l
 3. **Deploy to Vercel** — see above
 4. **Register production webhook in Stripe (live mode)** — separate from test mode webhook
 5. **Flip to live keys** — replace `pk_test_` / `sk_test_` with live keys in Vercel → redeploy
+6. **Verify a Resend sending domain** — `RESEND_API_KEY` is set, but `EMAIL_FROM` is still the `onboarding@resend.dev` sandbox default, which can only send to your own Resend account email:
+   - Resend Dashboard → Domains → Add Domain → enter your domain
+   - Add the TXT/DKIM records it gives you at your DNS provider
+   - Wait for verification
+   - Update `EMAIL_FROM` in `.env.local` and Vercel to an address on that domain (e.g. `hello@coastalgrannyscollective.com`) → redeploy
+7. _(Optional, can wait until after launch)_ **Set up inbound email reply threading** — without this, customer replies to notification emails just land in your regular inbox instead of threading into `/admin/submissions`. Requires the domain from step 6 to be verified first:
+   - Resend Dashboard → Domains → your domain → add the **Receiving MX record** (use a subdomain like `inbox.yourdomain.com` if you already have MX records for regular email on the root domain, to avoid conflicting with it)
+   - Resend Dashboard → Webhooks → Create Webhook → Event: `email.received` → Endpoint: `https://yourdomain.com/api/webhooks/resend-inbound`
+   - Copy the webhook's signing secret → `RESEND_WEBHOOK_SECRET` in `.env.local` and Vercel
+   - Set `INBOUND_EMAIL_DOMAIN` to the subdomain used above
+   - Needs a live HTTPS deploy — the webhook endpoint can't be tested against localhost
 
 ---
 
@@ -376,40 +388,75 @@ Ordered by priority — work through these phases before going live.
 
 These are blocking issues: the site works locally but is not ready for real customers without them.
 
-| # | Task | Where |
-|---|---|---|
-| 1 | **Set up a dev Neon branch** so you're not testing against production data | See "Dev vs. Prod" section above |
-| 2 | **Set up Resend (or SendGrid)** for transactional email — required before: contact form, wholesale, gift card delivery, and order shipped notifications work end to end | Need email service account |
-| 3 | **Connect contact form to DB + email** — `ContactPageClient.tsx` has a TODO; currently shows "sent" but doesn't actually store or email anything | `app/contact/ContactPageClient.tsx` |
-| 4 | **Connect wholesale form to DB + email** — same issue | `app/wholesale/WholesalePageClient.tsx` |
-| 5 | **Connect coffee cart inquiry to DB** — currently opens a mailto: link which requires a local mail client | `app/coffee-cart/CoffeeCartClient.tsx` |
-| 6 | **Add Submission model + admin tab** — so contact, wholesale, and cart inquiries appear in the admin dashboard | See TODO in `app/admin/page.tsx` |
+| #   | Task                                                                                                                                                                                                                                                                                                      | Where                                                                  |
+| --- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------- |
+| 1   | **Set up a dev Neon branch** so you're not testing against production data                                                                                                                                                                                                                                | See "Dev vs. Prod" section above                                       |
+| 2   | ✅ **Resend wired up & API key added** — code integration done, `RESEND_API_KEY`/`EMAIL_FROM`/`NOTIFY_EMAIL` set in `.env.local`; still need to verify a sending domain (see Going Live Checklist above) before real customer emails go out — currently sandboxed to your own Resend account email        | `.env.local.example` has setup steps                                   |
+| 3   | ✅ **Contact form → DB + email** — done                                                                                                                                                                                                                                                                   | `app/contact/ContactPageClient.tsx`, `app/api/submissions`             |
+| 4   | ✅ **Wholesale form → DB + email** — done                                                                                                                                                                                                                                                                 | `app/wholesale/WholesalePageClient.tsx`, `app/api/submissions`         |
+| 5   | ✅ **Coffee cart inquiry → DB** — mailto: fallback removed, now posts to the DB                                                                                                                                                                                                                           | `app/coffee-cart/CoffeeCartClient.tsx`, `app/api/submissions`          |
+| 6   | ✅ **Submission model + admin Submissions tab** — done, with tabs for Contact/Wholesale/Cart, unread badges, and threaded email replies (admin replies from the dashboard; customer replies show back up in the thread once inbound email is set up — see `INBOUND_EMAIL_DOMAIN` in `.env.local.example`) | `app/admin/submissions/page.tsx`, `components/admin/SubmissionRow.tsx` |
 
 ### Phase 2 — Revenue-Critical
 
 These don't block launch but directly affect how much money the site makes.
 
-| # | Task | Where |
-|---|---|---|
-| 7 | **Swap Stripe subscriptions to recurring billing** — subscriptions currently charge as one-time payments, so customers aren't automatically rebilled | `app/api/create-payment-intent/route.ts` + Stripe Subscriptions API |
-| 8 | **Gift card email delivery** — currently adds to cart and records the order but never emails the recipient a code or balance | Need email service + gift card redemption logic |
-| 9 | **"Your order has shipped" email** — admin marks order shipped, customer gets a notification | Admin orders page + email service |
+| #   | Task                                                                                                                                                 | Where                                                               |
+| --- | ---------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------- |
+| 7   | **Swap Stripe subscriptions to recurring billing** — subscriptions currently charge as one-time payments, so customers aren't automatically rebilled | `app/api/create-payment-intent/route.ts` + Stripe Subscriptions API |
+| 8   | **Gift card email delivery** — currently adds to cart and records the order but never emails the recipient a code or balance                         | Need email service + gift card redemption logic                     |
+| 9   | **"Your order has shipped" email** — admin marks order shipped, customer gets a notification                                                         | Admin orders page + email service                                   |
 
 ### Phase 3 — Admin Quality-of-Life
 
-| # | Task | Where |
-|---|---|---|
-| 10 | **Orders: date range filter + status filter** — filter by past 30/60/90 days and by status (paid, refunded, etc.) | `app/admin/orders/page.tsx` has a TODO |
-| 11 | **Orders: CSV export** — download current filtered view as a spreadsheet | `app/admin/orders/page.tsx` has a TODO |
-| 12 | **Calculated shipping** — currently flat $8 or free over $60; integrate a carrier API (EasyPost / Shippo) for real rates | `components/checkout/CheckoutModal.tsx` + `components/cart/CartDrawer.tsx` |
+| #   | Task                                                                                                                                                                                   | Where                                                                      |
+| --- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------- |
+| 10  | **Orders: date range filter + status filter** — filter by past 30/60/90 days and by status (paid, refunded, etc.)                                                                      | `app/admin/orders/page.tsx` has a TODO                                     |
+| 11  | **Orders: CSV export** — download current filtered view as a spreadsheet                                                                                                               | `app/admin/orders/page.tsx` has a TODO                                     |
+| 12  | **Calculated shipping** — currently flat $8 or free over $60; integrate a carrier API (EasyPost / Shippo) for real rates                                                               | `components/checkout/CheckoutModal.tsx` + `components/cart/CartDrawer.tsx` |
+| 13  | **Admin: page/feature visibility controls** — admin-configurable show/hide for nav, footer, and shop sub-pages, split between guest and account-holder audiences. See full spec below. | New admin settings section + nav/footer components                         |
+
+See [Visibility Control Spec](#visibility-control-spec-item-13) below for the full breakdown of item 13.
 
 ### Phase 4 — Customer Experience
 
-| # | Task | Where |
-|---|---|---|
-| 13 | **Star ratings on coffee cards** — requires `Rating` model (userId, coffeeId, 1–5 stars), order-history gate (only buyers can rate), aggregated display on `CoffeeCard` | `components/shop/CoffeeCard.tsx` has a TODO |
-| 14 | **"Notify Me" for out-of-stock coffees** — requires `StockAlert` model; email all subscribers when admin marks item back in stock | `components/shop/CoffeeCard.tsx` has a TODO |
-| 15 | **Inventory quantity tracking** — currently just an in/out toggle; add `qty` field and decrement on purchase via webhook | `prisma/schema.prisma` + webhook |
+| #   | Task                                                                                                                                                                    | Where                                       |
+| --- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------- |
+| 14  | **Star ratings on coffee cards** — requires `Rating` model (userId, coffeeId, 1–5 stars), order-history gate (only buyers can rate), aggregated display on `CoffeeCard` | `components/shop/CoffeeCard.tsx` has a TODO |
+| 15  | **"Notify Me" for out-of-stock coffees** — requires `StockAlert` model; email all subscribers when admin marks item back in stock                                       | `components/shop/CoffeeCard.tsx` has a TODO |
+| 16  | **Inventory quantity tracking** — currently just an in/out toggle; add `qty` field and decrement on purchase via webhook                                                | `prisma/schema.prisma` + webhook            |
+
+### Visibility Control Spec (Item 13)
+
+Admin-configurable toggles controlling who can see which pages/nav items — guests (no account), account holders (logged in), or both. **All toggles default ON** except the coffee-tab tiers noted below.
+
+**Always visible, not toggleable** (guests + account holders):
+
+- About page
+- Coffee Cart page
+- Contact page
+- FAQ (footer link)
+
+**Toggleable — top nav / pages:**
+
+- **Wholesale page** — admin show/hide toggle
+- **Shop dropdown (whole)** — admin toggle to show/hide the entire dropdown for guests and/or account holders
+  - **Merch** (within Shop) — independently toggleable for guests and/or account holders
+  - **Coffee tab** (within Shop) — tiered access, admin-controlled:
+    1. _Initial default:_ visible only to specific account emails the admin allow-lists individually
+    2. Admin can widen to: all logged-in account holders
+    3. Admin can widen further to: guests too (public)
+    - The "allow guests" tier is a toggle nested inside the account-holder tier, per the phased rollout above
+
+**Footer nav must always mirror the top nav's current toggle state**, plus:
+
+- **Fix:** footer is currently missing a Coffee Cart link — add it (always visible, matches top nav)
+- **Shipping Info** + **Returns & Refunds** footer links — only show when the Shop dropdown toggle is on
+- **Brewing Guides** footer link — only show once the Coffee tab is opened to account holders (tier 2+ above, not just the initial email allow-list)
+- **FAQ** — always shown regardless of any toggle
+- **Coffee Subscriptions**, **Gift Cards**, **Merch** footer links — each independently toggleable by admin for guests / account holders / everyone
+
+This likely needs a new admin settings model (e.g. `SiteVisibilitySettings`) storing per-feature flags plus the coffee-tab email allow-list, read by both the nav and footer components.
 
 ---
 
@@ -440,28 +487,33 @@ These don't block launch but directly affect how much money the site makes.
 - ✅ Admin: featured coffees toggle (controls homepage featured section)
 - ✅ Admin: in-stock / out-of-stock toggle per product
 - ✅ Role-based access control (customer vs admin)
+- ✅ Contact, wholesale, and coffee cart inquiries saved to DB and manageable from `/admin/submissions` (tabs, unread badges, threaded email replies)
+- ✅ Resend integration (`lib/email.ts`) — needs an account + verified domain to actually send, see `.env.local.example`
 
 ## Not Yet Included
 
 ### Email / Transactional
-- ❌ Contact and wholesale forms save submission UI only — not emailed (needs Resend or SendGrid)
-- ❌ Gift card email delivery — order recorded but not sent to recipient (needs email service)
-- ❌ Fulfillment / "your order has shipped" emails (needs email service)
+
+- ❌ Gift card email delivery — order recorded but not sent to recipient (uses the same Resend integration, just not wired to the gift card flow yet)
+- ❌ Fulfillment / "your order has shipped" emails (same — Resend is wired up, just not triggered from the orders page yet)
+- ❌ Inbound email threading is code-complete but requires a verified domain + MX record + Resend webhook — see `INBOUND_EMAIL_DOMAIN` in `.env.local.example`
 
 ### Payments / Subscriptions
+
 - ❌ Recurring subscriptions — charged as one-time payments (needs Stripe Subscriptions API)
 - ❌ Calculated shipping rates — flat rate only: free over $60, $8 otherwise
 
 ### Admin Dashboard
-- ❌ Submissions tab — contact, wholesale, and coffee cart form data not saved to DB or surfaced in admin (`app/admin/page.tsx`, `ContactPageClient.tsx`, `WholesalePageClient.tsx`, `CoffeeCartClient.tsx`)
+
 - ❌ Order sorting and filtering — date range buttons (30 / 60 / 90 days / all time), sort by customer name (`app/admin/orders/page.tsx`)
 - ❌ CSV export for orders — export currently filtered rows with order ID, customer, items, amount, status, date (`app/admin/orders/page.tsx`)
 
 ### Shop
+
 - ❌ Star ratings on coffee cards — requires `Rating` model (userId, coffeeId, stars 1–5), order-history verification before saving, and display on `CoffeeCard` (`components/shop/CoffeeCard.tsx`)
 - ❌ "Notify Me" for out-of-stock coffees — requires `StockAlert` model, email trigger when admin marks item back in stock (`components/shop/CoffeeCard.tsx`)
 - ❌ Inventory management / quantity tracking
 
 ---
 
-*For a plain-English explanation of how this project works, see [OVERVIEW.md](./OVERVIEW.md).*
+_For a plain-English explanation of how this project works, see [OVERVIEW.md](./OVERVIEW.md)._

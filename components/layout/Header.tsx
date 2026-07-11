@@ -58,7 +58,7 @@ export function Header() {
   }, [pathname]);
 
   const isShopActive = pathname.startsWith('/shop');
-  const firstName = session?.user?.name?.split(' ')[0];
+  const firstName = session?.user?.firstName;
 
   return (
     <>
@@ -186,7 +186,9 @@ export function Header() {
                 {userOpen && (
                   <div className="absolute top-full right-0 mt-1 w-48 bg-white rounded-xl shadow-xl border border-stone-100 py-1 z-50">
                     <div className="px-4 py-2.5 border-b border-stone-100">
-                      <p className="text-xs font-semibold text-stone-900">{session.user.name}</p>
+                      <p className="text-xs font-semibold text-stone-900">
+                        {session.user.firstName} {session.user.lastName}
+                      </p>
                       <p className="text-xs text-stone-400 truncate">{session.user.email}</p>
                     </div>
                     <Link
