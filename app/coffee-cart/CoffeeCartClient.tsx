@@ -12,6 +12,7 @@ import {
 import { useSession } from "next-auth/react"
 import { useEffect, useState } from "react"
 import { useFormErrors } from "@/lib/hooks/useFormErrors"
+import { Reveal } from "@/components/ui/Reveal"
 
 const EVENT_TYPES = [
   "Private Gathering",
@@ -151,7 +152,7 @@ export function CoffeeCartClient() {
     <section className="max-w-7xl mx-auto px-4 sm:px-6 py-16" id="inquiry">
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-12 items-start">
         {/* Left — copy */}
-        <div>
+        <Reveal>
           <p className="text-xs font-semibold text-amber-700 uppercase tracking-widest mb-3">
             Book the Cart
           </p>
@@ -192,10 +193,11 @@ export function CoffeeCartClient() {
               @coastalgrannys
             </a>
           </div>
-        </div>
+        </Reveal>
 
         {/* Right — form */}
-        <div
+        <Reveal
+          delay={150}
           className="lg:col-span-3 relative rounded-2xl shadow-sm overflow-hidden p-8"
           style={{ backgroundColor: "#F5EFE6" }}
         >
@@ -405,7 +407,7 @@ export function CoffeeCartClient() {
               </p>
             </form>
           </div>
-        </div>
+        </Reveal>
       </div>
     </section>
   )

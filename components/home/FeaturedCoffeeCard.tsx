@@ -24,10 +24,10 @@ export function FeaturedCoffeeCard({ slug, name, subtitle, origin, notes, prices
   return (
     <Link
       href="/shop/coffee"
-      className="group bg-white rounded-2xl border border-stone-100 overflow-hidden hover:shadow-md transition-shadow"
+      className="group bg-white rounded-2xl border border-stone-100 overflow-hidden hover:shadow-md transition-shadow flex flex-col h-full"
     >
       <div
-        className="h-40 flex items-center justify-center relative overflow-hidden"
+        className="h-40 flex items-center justify-center relative overflow-hidden shrink-0"
         style={{ background: gradient }}
       >
         {!imgError && (
@@ -45,8 +45,8 @@ export function FeaturedCoffeeCard({ slug, name, subtitle, origin, notes, prices
           </span>
         )}
       </div>
-      <div className="p-4">
-        <p className="text-[10px] text-stone-400 font-medium uppercase tracking-widest mb-0.5">
+      <div className="p-4 flex flex-col flex-1">
+        <p className="text-[10px] text-stone-400 font-medium uppercase tracking-widest mb-0.5 truncate">
           {subtitle}
         </p>
         <h3 className="font-serif text-xl text-stone-900 mb-1 group-hover:text-amber-700 transition-colors">
@@ -60,7 +60,7 @@ export function FeaturedCoffeeCard({ slug, name, subtitle, origin, notes, prices
             </span>
           ))}
         </div>
-        <p className="text-sm font-semibold text-stone-900">
+        <p className="text-sm font-semibold text-stone-900 mt-auto">
           From ${lowestPrice}
           <span className="text-xs font-normal text-stone-400 ml-1">/ {smallestSize}</span>
         </p>

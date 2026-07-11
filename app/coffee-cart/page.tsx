@@ -6,6 +6,7 @@ import {
 } from "@phosphor-icons/react/dist/ssr"
 import { CartCarousel } from "./CartCarousel"
 import { CoffeeCartClient } from "./CoffeeCartClient"
+import { Reveal } from "@/components/ui/Reveal"
 
 export const metadata = {
   title: "Coffee Cart — Coastal Granny's Collective",
@@ -93,10 +94,12 @@ export default function CoffeeCartPage() {
       <section className="max-w-7xl mx-auto px-4 sm:px-6 py-16">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 items-stretch mb-20">
           {/* Left — carousel */}
-          <CartCarousel />
+          <Reveal>
+            <CartCarousel />
+          </Reveal>
 
           {/* Right — offerings stacked */}
-          <div className="flex flex-col justify-between py-2">
+          <Reveal delay={150} className="flex flex-col justify-between py-2">
             <div>
               <p className="text-xs font-semibold text-amber-700 uppercase tracking-widest mb-2">
                 What We Offer
@@ -123,7 +126,7 @@ export default function CoffeeCartPage() {
                 </div>
               ))}
             </div>
-          </div>
+          </Reveal>
         </div>
       </section>
 

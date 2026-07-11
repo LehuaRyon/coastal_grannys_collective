@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/Button"
 import { PhoneInput } from "@/components/ui/PhoneInput"
 import { showToast } from "@/components/ui/Toast"
 import { useFormErrors } from "@/lib/hooks/useFormErrors"
+import { Reveal } from "@/components/ui/Reveal"
 import { CheckCircleIcon } from "@phosphor-icons/react"
 import { useSession } from "next-auth/react"
 import { useEffect, useState } from "react"
@@ -129,7 +130,7 @@ export function WholesalePageClient({
       <section className="max-w-7xl mx-auto px-4 sm:px-6 py-16">
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-12 lg:gap-20">
           {/* Info */}
-          <div>
+          <Reveal>
             <h2 className="font-serif text-3xl text-stone-900 mb-4">
               {content.whyHeading}
             </h2>
@@ -155,10 +156,11 @@ export function WholesalePageClient({
                 </li>
               ))}
             </ul>
-          </div>
+          </Reveal>
 
           {/* Form */}
-          <div
+          <Reveal
+            delay={150}
             id="ws-form"
             className="lg:col-span-3 relative rounded-2xl shadow-sm overflow-hidden p-8"
             style={{ backgroundColor: "#F5EFE6" }}
@@ -330,7 +332,7 @@ export function WholesalePageClient({
                 </div>
               )}
             </div>
-          </div>
+          </Reveal>
         </div>
       </section>
     </>

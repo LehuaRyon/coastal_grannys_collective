@@ -1,4 +1,5 @@
 import { FeaturedCoffeeCard } from "@/components/home/FeaturedCoffeeCard"
+import { Reveal } from "@/components/ui/Reveal"
 import { dbToCoffee } from "@/lib/data/db-products"
 import { prisma } from "@/lib/db"
 import {
@@ -130,51 +131,54 @@ export default async function HomePage() {
       {/* ── Featured Coffees ── */}
       <section className="bg-white py-20 px-4 sm:px-6">
         <div className="max-w-7xl mx-auto">
-          <div className="flex items-end justify-between mb-10">
-            <div>
-              <p className="text-xs font-semibold text-amber-700 uppercase tracking-widest mb-1">
-                {featuredEyebrow}
-              </p>
-              <h2 className="font-serif text-4xl text-stone-900">
-                {featuredHeading}
-              </h2>
-              <p className="text-stone-500 text-sm mt-2 max-w-md">
-                {featuredBody}
-              </p>
-            </div>
-            <Link
-              href="/shop/coffee"
-              className="hidden sm:inline-flex text-sm font-medium text-amber-700 hover:text-amber-600 gap-1 items-center whitespace-nowrap"
-            >
-              View all
-              <svg
-                width="16"
-                height="16"
-                viewBox="0 0 16 16"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="1.5"
-                strokeLinecap="round"
+          <Reveal>
+            <div className="flex items-end justify-between mb-10">
+              <div>
+                <p className="text-xs font-semibold text-amber-700 uppercase tracking-widest mb-1">
+                  {featuredEyebrow}
+                </p>
+                <h2 className="font-serif text-4xl text-stone-900">
+                  {featuredHeading}
+                </h2>
+                <p className="text-stone-500 text-sm mt-2 max-w-md">
+                  {featuredBody}
+                </p>
+              </div>
+              <Link
+                href="/shop/coffee"
+                className="hidden sm:inline-flex text-sm font-medium text-amber-700 hover:text-amber-600 gap-1 items-center whitespace-nowrap"
               >
-                <path d="M3 8h10M9 4l4 4-4 4" />
-              </svg>
-            </Link>
-          </div>
+                View all
+                <svg
+                  width="16"
+                  height="16"
+                  viewBox="0 0 16 16"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.5"
+                  strokeLinecap="round"
+                >
+                  <path d="M3 8h10M9 4l4 4-4 4" />
+                </svg>
+              </Link>
+            </div>
+          </Reveal>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            {coffees.map((coffee) => (
-              <FeaturedCoffeeCard
-                key={coffee.id}
-                slug={coffee.slug}
-                name={coffee.name}
-                subtitle={coffee.subtitle}
-                origin={coffee.origin}
-                notes={coffee.notes}
-                prices={coffee.prices}
-                gradient={coffee.gradient}
-                badge={coffee.badge}
-                hasImage={coffee.hasImage}
-              />
+            {coffees.map((coffee, i) => (
+              <Reveal key={coffee.id} delay={i * 80}>
+                <FeaturedCoffeeCard
+                  slug={coffee.slug}
+                  name={coffee.name}
+                  subtitle={coffee.subtitle}
+                  origin={coffee.origin}
+                  notes={coffee.notes}
+                  prices={coffee.prices}
+                  gradient={coffee.gradient}
+                  badge={coffee.badge}
+                  hasImage={coffee.hasImage}
+                />
+              </Reveal>
             ))}
           </div>
 
@@ -198,7 +202,7 @@ export default async function HomePage() {
           className="absolute inset-0 bg-cover bg-center bg-no-repeat"
           style={{ backgroundImage: "url(/images/sub-bg.png)" }}
         />
-        <div className="relative max-w-4xl mx-auto text-center">
+        <Reveal className="relative max-w-4xl mx-auto text-center">
           <CoffeeIcon
             size={48}
             weight="duotone"
@@ -225,20 +229,20 @@ export default async function HomePage() {
               One-Time Order
             </Link>
           </div>
-        </div>
+        </Reveal>
       </section>
 
       {/* ── Brand Story ── */}
       <section className="bg-stone-50 py-20 px-4 sm:px-6">
         <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
-          <div className="rounded-3xl h-72 lg:h-96 overflow-hidden">
+          <Reveal className="rounded-3xl h-72 lg:h-96 overflow-hidden">
             <img
               src="/images/cg-logo-illustration.png"
               alt="Coastal Granny's Collective"
               className="w-full h-full object-cover"
             />
-          </div>
-          <div>
+          </Reveal>
+          <Reveal delay={150}>
             <p className="text-xs font-semibold text-amber-700 uppercase tracking-widest mb-3">
               {storyEyebrow}
             </p>
@@ -260,7 +264,7 @@ export default async function HomePage() {
                 Wholesale
               </Link>
             </div>
-          </div>
+          </Reveal>
         </div>
       </section>
 
@@ -298,8 +302,8 @@ export default async function HomePage() {
               title: "Community",
               desc: "Pop-ups and private tastings all around San Diego",
             },
-          ].map((v) => (
-            <div key={v.title}>
+          ].map((v, i) => (
+            <Reveal key={v.title} delay={i * 100}>
               <span className="block mb-3">
                 {v.icon === "coffee" && (
                   <CoffeeIcon
@@ -338,7 +342,7 @@ export default async function HomePage() {
                 {v.title}
               </p>
               <p className="text-sm text-stone-400 leading-relaxed">{v.desc}</p>
-            </div>
+            </Reveal>
           ))}
         </div>
       </section>

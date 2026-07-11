@@ -1,5 +1,6 @@
 import Link from "next/link"
 import { prisma } from "@/lib/db"
+import { Reveal } from "@/components/ui/Reveal"
 import {
   CoffeeBeanIcon,
   FlaskIcon,
@@ -89,7 +90,7 @@ export default async function AboutPage() {
       {/* Story — Ryan's origin */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 py-16">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-14 items-center mb-20">
-          <div>
+          <Reveal>
             <p className="text-xs font-semibold text-amber-700 uppercase tracking-widest mb-3">
               How It Started
             </p>
@@ -127,26 +128,26 @@ export default async function AboutPage() {
               <InstagramLogoIcon size={16} weight="duotone" /> Follow on
               Instagram
             </a>
-          </div>
-          <div className="rounded-3xl overflow-hidden shadow-xl">
+          </Reveal>
+          <Reveal delay={150} className="rounded-3xl overflow-hidden shadow-xl">
             <img
               src="/images/about/kelly-brand.png"
               alt="Coastal Granny's Collective"
               className="w-full h-full object-cover"
             />
-          </div>
+          </Reveal>
         </div>
 
         {/* Story — Kelly + the cart */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-14 items-center mb-20">
-          <div className="order-2 lg:order-1 rounded-3xl overflow-hidden shadow-xl">
+          <Reveal className="order-2 lg:order-1 rounded-3xl overflow-hidden shadow-xl">
             <img
               src="/images/about/kelly-with-drink.png"
               alt="Kelly McLaughlin — Coastal Granny's Collective"
               className="w-full h-full object-cover"
             />
-          </div>
-          <div className="order-1 lg:order-2">
+          </Reveal>
+          <Reveal delay={150} className="order-1 lg:order-2">
             <p className="text-xs font-semibold text-amber-700 uppercase tracking-widest mb-3">
               Meet Kelly
             </p>
@@ -171,7 +172,7 @@ export default async function AboutPage() {
               — and it&apos;s built on the idea that exceptional coffee should
               feel accessible, fun, and genuinely worth talking about.
             </p>
-          </div>
+          </Reveal>
         </div>
 
         {/* Values */}
@@ -179,9 +180,10 @@ export default async function AboutPage() {
           What We Stand For
         </h2>
         <div className="grid grid-cols-2 gap-4 mb-20">
-          {values.map((v) => (
-            <div
+          {values.map((v, i) => (
+            <Reveal
               key={v.title}
+              delay={i * 80}
               className="bg-white rounded-2xl border border-stone-100 p-6 shadow-sm"
             >
               <span className="block mb-3">
@@ -202,36 +204,36 @@ export default async function AboutPage() {
                 {v.title}
               </h3>
               <p className="text-xs text-stone-500 leading-relaxed">{v.text}</p>
-            </div>
+            </Reveal>
           ))}
         </div>
 
         {/* Three image cards + quote */}
         <div className="mb-20">
           <div className="grid grid-cols-3 gap-5 mb-5">
-            <div className="rounded-3xl overflow-hidden shadow-xl aspect-[3/4]">
+            <Reveal className="rounded-3xl overflow-hidden shadow-xl aspect-[3/4]">
               <img
                 src="/images/about/cart-popup.png"
                 alt="Coastal Granny's pop-up cart"
                 className="w-full h-full object-cover"
               />
-            </div>
-            <div className="rounded-3xl overflow-hidden shadow-xl aspect-[3/4]">
+            </Reveal>
+            <Reveal delay={80} className="rounded-3xl overflow-hidden shadow-xl aspect-[3/4]">
               <img
                 src="/images/about/rodeo-queen-bag.png"
                 alt="Rodeo Queen — Coastal Granny's Collective"
                 className="w-full h-full object-cover object-top"
               />
-            </div>
-            <div className="rounded-3xl overflow-hidden shadow-xl aspect-[3/4]">
+            </Reveal>
+            <Reveal delay={160} className="rounded-3xl overflow-hidden shadow-xl aspect-[3/4]">
               <img
                 src="/images/about/cg-drink.png"
                 alt="Coastal Granny's signature drink"
                 className="w-full h-full object-cover"
               />
-            </div>
+            </Reveal>
           </div>
-          <div
+          <Reveal
             className="relative rounded-3xl px-10 py-9 text-center overflow-hidden"
             style={{ backgroundColor: "#F5EFE6" }}
           >
@@ -251,7 +253,7 @@ export default async function AboutPage() {
                 — Ryan McLaughlin, Roaster
               </p>
             </div>
-          </div>
+          </Reveal>
         </div>
 
         {/* Meet the Duo */}
@@ -263,7 +265,7 @@ export default async function AboutPage() {
           community.
         </p>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 mb-20">
-          <div className="bg-white rounded-2xl border border-stone-100 p-8 shadow-sm">
+          <Reveal className="bg-white rounded-2xl border border-stone-100 p-8 shadow-sm">
             <CoffeeBeanIcon
               size={48}
               weight="duotone"
@@ -283,15 +285,15 @@ export default async function AboutPage() {
               believes coffee can be a vehicle for storytelling. His current
               obsession: experimental co-ferments and rare natural process lots.
             </p>
-          </div>
-          <div className="rounded-2xl overflow-hidden shadow-sm">
+          </Reveal>
+          <Reveal delay={100} className="rounded-2xl overflow-hidden shadow-sm">
             <img
               src="/images/about/ryan-and-kelly.png"
               alt="Ryan and Kelly McLaughlin"
               className="w-full h-full object-cover"
             />
-          </div>
-          <div className="bg-white rounded-2xl border border-stone-100 p-8 shadow-sm">
+          </Reveal>
+          <Reveal delay={200} className="bg-white rounded-2xl border border-stone-100 p-8 shadow-sm">
             <FlowerIcon
               size={48}
               weight="duotone"
@@ -311,11 +313,11 @@ export default async function AboutPage() {
               something special — because they are. The brand vision is hers,
               and it shows in every cup she serves.
             </p>
-          </div>
+          </Reveal>
         </div>
 
         {/* CTA */}
-        <div
+        <Reveal
           className="relative rounded-3xl p-10 text-center overflow-hidden"
           style={{ backgroundColor: "#F5EFE6" }}
         >
@@ -356,7 +358,7 @@ export default async function AboutPage() {
               </Link>
             </div>
           </div>
-        </div>
+        </Reveal>
       </section>
     </>
   )

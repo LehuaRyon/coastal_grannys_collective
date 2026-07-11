@@ -85,3 +85,29 @@ body {
 .animate-toast {
   animation: toast-in 0.2s ease-out forwards;
 }
+
+/* Cart icon bounce — fires once when an item is added */
+@keyframes cart-pulse {
+  0% {
+    transform: scale(1);
+  }
+  30% {
+    transform: scale(1.35);
+  }
+  55% {
+    transform: scale(0.92);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+.animate-cart-pulse {
+  animation: cart-pulse 0.5s ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-cart-pulse {
+    animation: none;
+  }
+}

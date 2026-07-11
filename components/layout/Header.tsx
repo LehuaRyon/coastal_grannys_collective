@@ -36,6 +36,19 @@ export function Header() {
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
 
+  // Bounce the cart icon once whenever an item gets added
+  const [cartPulse, setCartPulse] = useState(false);
+  const prevCartCount = useRef(cartCount);
+  useEffect(() => {
+    if (mounted && cartCount > prevCartCount.current) {
+      setCartPulse(true);
+      const t = setTimeout(() => setCartPulse(false), 500);
+      prevCartCount.current = cartCount;
+      return () => clearTimeout(t);
+    }
+    prevCartCount.current = cartCount;
+  }, [cartCount, mounted]);
+
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 10);
     window.addEventListener('scroll', handleScroll, { passive: true });
@@ -92,34 +105,46 @@ export function Header() {
           {/* Desktop nav */}
           <nav className="hidden lg:flex items-center gap-1">
             {/* Shop dropdown */}
-            <div ref={shopRef} className="relative">
+            <div
+              ref={shopRef}
+              className="relative"
+              onMouseEnter={() => setShopOpen(true)}
+              onMouseLeave={() => setShopOpen(false)}
+            >
               <button
                 onClick={() => setShopOpen((p) => !p)}
-                className={`flex items-center gap-1 px-4 py-2 rounded-full text-sm font-medium transition-colors ${
+                className={`group relative flex items-center gap-1 px-4 py-2 rounded-full text-sm font-medium transition-colors ${
                   isShopActive
                     ? 'text-amber-700'
-                    : 'text-stone-700 hover:text-stone-900 hover:bg-stone-100'
+                    : 'text-stone-700 hover:text-stone-900'
                 }`}
               >
                 Shop
                 <CaretDownIcon size={12} weight="bold" className={`transition-transform ${shopOpen ? 'rotate-180' : ''}`} />
+                <span
+                  className={`absolute left-4 right-4 -bottom-0.5 h-0.5 bg-amber-700 rounded-full origin-left transition-transform duration-300 ${
+                    isShopActive ? 'scale-x-100' : 'scale-x-0 group-hover:scale-x-100'
+                  }`}
+                />
               </button>
 
               {shopOpen && (
-                <div className="absolute top-full left-0 mt-1 w-52 bg-white rounded-xl shadow-xl border border-stone-100 py-1 z-50">
-                  {shopLinks.map((l) => (
-                    <Link
-                      key={l.href}
-                      href={l.href}
-                      className={`block px-4 py-2.5 text-sm transition-colors ${
-                        pathname === l.href
-                          ? 'text-amber-700 bg-amber-50'
-                          : 'text-stone-700 hover:bg-stone-50'
-                      }`}
-                    >
-                      {l.label}
-                    </Link>
-                  ))}
+                <div className="absolute top-full left-0 pt-1 w-52 z-50">
+                  <div className="bg-white rounded-xl shadow-xl border border-stone-100 py-1">
+                    {shopLinks.map((l) => (
+                      <Link
+                        key={l.href}
+                        href={l.href}
+                        className={`block px-4 py-2.5 text-sm transition-colors ${
+                          pathname === l.href
+                            ? 'text-amber-700 bg-amber-50'
+                            : 'text-stone-700 hover:bg-stone-50'
+                        }`}
+                      >
+                        {l.label}
+                      </Link>
+                    ))}
+                  </div>
                 </div>
               )}
             </div>
@@ -128,13 +153,18 @@ export function Header() {
               <Link
                 key={l.href}
                 href={l.href}
-                className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
+                className={`group relative px-4 py-2 rounded-full text-sm font-medium transition-colors ${
                   pathname === l.href
                     ? 'text-amber-700'
-                    : 'text-stone-700 hover:text-stone-900 hover:bg-stone-100'
+                    : 'text-stone-700 hover:text-stone-900'
                 }`}
               >
                 {l.label}
+                <span
+                  className={`absolute left-4 right-4 -bottom-0.5 h-0.5 bg-amber-700 rounded-full origin-left transition-transform duration-300 ${
+                    pathname === l.href ? 'scale-x-100' : 'scale-x-0 group-hover:scale-x-100'
+                  }`}
+                />
               </Link>
             ))}
 
@@ -142,13 +172,18 @@ export function Header() {
             {session?.user?.role === 'admin' && (
               <Link
                 href="/admin"
-                className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
+                className={`group relative px-4 py-2 rounded-full text-sm font-medium transition-colors ${
                   pathname.startsWith('/admin')
                     ? 'text-amber-700'
-                    : 'text-stone-700 hover:text-stone-900 hover:bg-stone-100'
+                    : 'text-stone-700 hover:text-stone-900'
                 }`}
               >
                 Admin
+                <span
+                  className={`absolute left-4 right-4 -bottom-0.5 h-0.5 bg-amber-700 rounded-full origin-left transition-transform duration-300 ${
+                    pathname.startsWith('/admin') ? 'scale-x-100' : 'scale-x-0 group-hover:scale-x-100'
+                  }`}
+                />
               </Link>
             )}
           </nav>
@@ -161,7 +196,7 @@ export function Header() {
               className="relative p-2 text-stone-700 hover:text-stone-900 hover:bg-stone-100 rounded-full transition-colors"
               aria-label="Cart"
             >
-              <ShoppingBagIcon size={20} weight="duotone" />
+              <ShoppingBagIcon size={20} weight="duotone" className={cartPulse ? 'animate-cart-pulse' : ''} />
               {mounted && cartCount > 0 && (
                 <span className="absolute -top-0.5 -right-0.5 w-4 h-4 flex items-center justify-center bg-amber-700 text-white text-[10px] font-bold rounded-full">
                   {cartCount > 9 ? '9+' : cartCount}

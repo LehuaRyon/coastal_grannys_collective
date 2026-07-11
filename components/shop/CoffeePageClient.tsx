@@ -3,6 +3,7 @@
 import { CoffeeCard } from "@/components/shop/CoffeeCard"
 import { ProductModal } from "@/components/shop/ProductModal"
 import { Button } from "@/components/ui/Button"
+import { Reveal } from "@/components/ui/Reveal"
 import type { Coffee, RoastFilter } from "@/lib/types"
 import { useRouter } from "next/navigation"
 import { useMemo, useState } from "react"
@@ -373,8 +374,10 @@ export function CoffeePageClient({ coffees }: { coffees: Coffee[] }) {
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-            {filtered.map((coffee) => (
-              <CoffeeCard key={coffee.id} coffee={coffee} onViewDetails={setSelectedProduct} />
+            {filtered.map((coffee, i) => (
+              <Reveal key={coffee.id} delay={Math.min(i * 60, 480)}>
+                <CoffeeCard coffee={coffee} onViewDetails={setSelectedProduct} />
+              </Reveal>
             ))}
           </div>
         )}

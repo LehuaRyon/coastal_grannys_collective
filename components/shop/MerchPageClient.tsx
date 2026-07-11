@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation"
 import { useState } from "react"
 import { MerchModal } from "@/components/shop/MerchModal"
 import { useCartStore } from "@/lib/store/cart"
+import { Reveal } from "@/components/ui/Reveal"
 
 export function MerchPageClient({ merch }: { merch: Merch[] }) {
   const router = useRouter()
@@ -38,15 +39,15 @@ export function MerchPageClient({ merch }: { merch: Merch[] }) {
       </div>
 
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6">
-        {merch.map((m) => {
+        {merch.map((m, i) => {
           const isBack = !!showingBack[m.id]
           const imgSrc = m.hasFrontBack
             ? `/images/products/${m.slug}-${isBack ? "back" : "front"}.png`
             : `/images/products/${m.slug}.png`
 
           return (
+            <Reveal key={m.id} delay={Math.min(i * 60, 480)}>
             <div
-              key={m.id}
               onClick={() => setSelected(m)}
               className="group bg-white rounded-2xl shadow-sm border border-stone-100 overflow-hidden cursor-pointer hover:shadow-md hover:border-stone-200 transition-all duration-300"
             >
@@ -102,6 +103,7 @@ export function MerchPageClient({ merch }: { merch: Merch[] }) {
                 <p className="text-sm font-semibold text-stone-600">${m.price}</p>
               </div>
             </div>
+            </Reveal>
           )
         })}
       </div>

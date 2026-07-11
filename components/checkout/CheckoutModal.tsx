@@ -12,6 +12,7 @@ import { CheckCircleIcon } from "@phosphor-icons/react"
 import { Elements } from "@stripe/react-stripe-js"
 import { useSession } from "next-auth/react"
 import { useEffect, useState } from "react"
+import confetti from "canvas-confetti"
 import { StripePaymentForm } from "./StripePaymentForm"
 
 type Step = 1 | 2 | 3 | "confirmed"
@@ -145,6 +146,33 @@ export function CheckoutModal({ isOpen, onClose }: CheckoutModalProps) {
       })
       .finally(() => setLoadingIntent(false))
   }, [step, clientSecret, grandTotal])
+
+  // Confetti burst on order confirmation — brand colors, skipped for
+  // prefers-reduced-motion since it's a purely celebratory flourish.
+  useEffect(() => {
+    if (step !== "confirmed") return
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return
+    const colors = ["#CC9818", "#E8A8A0", "#8A9660", "#9A6E14"]
+    confetti({
+      particleCount: 100,
+      spread: 75,
+      origin: { y: 0.6 },
+      colors,
+      startVelocity: 35,
+      scalar: 0.9,
+    })
+    const timer = setTimeout(() => {
+      confetti({
+        particleCount: 60,
+        spread: 100,
+        origin: { y: 0.6 },
+        colors,
+        startVelocity: 25,
+        scalar: 0.7,
+      })
+    }, 150)
+    return () => clearTimeout(timer)
+  }, [step])
 
   function handleClose() {
     onClose()
