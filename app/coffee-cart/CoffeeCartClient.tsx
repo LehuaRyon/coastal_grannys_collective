@@ -3,6 +3,7 @@
 import { Button } from "@/components/ui/Button"
 import { PhoneInput } from "@/components/ui/PhoneInput"
 import { showToast } from "@/components/ui/Toast"
+import { blockInvalidNumberKey } from "@/lib/utils/numberInput"
 import {
   FlowerIcon,
   InstagramLogoIcon,
@@ -10,6 +11,7 @@ import {
 } from "@phosphor-icons/react"
 import { useSession } from "next-auth/react"
 import { useEffect, useState } from "react"
+import { useFormErrors } from "@/lib/hooks/useFormErrors"
 
 const EVENT_TYPES = [
   "Private Gathering",
@@ -41,6 +43,7 @@ const HOW_FOUND = [
 
 export function CoffeeCartClient() {
   const { data: session } = useSession()
+  const { setErrors, clearError, borderClass } = useFormErrors()
   const [submitted, setSubmitted] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [form, setForm] = useState({
@@ -69,12 +72,41 @@ export function CoffeeCartClient() {
     }))
   }, [session])
 
+  // Phone isn't on the session — fetch it from the account's saved profile
+  useEffect(() => {
+    if (!session?.user) return
+    fetch("/api/account/profile")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        const phone = data?.user?.phone
+        if (!phone) return
+        setForm((f) => ({ ...f, phone: f.phone || phone }))
+      })
+      .catch(() => {})
+  }, [session])
+
   function set(key: keyof typeof form, value: string) {
     setForm((f) => ({ ...f, [key]: value }))
+    clearError(key)
   }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
+    const missing = new Set<string>()
+    if (!form.firstName) missing.add("firstName")
+    if (!form.lastName) missing.add("lastName")
+    if (!form.email) missing.add("email")
+    if (!form.eventDate) missing.add("eventDate")
+    if (!form.startTime) missing.add("startTime")
+    if (!form.guestCount) missing.add("guestCount")
+    if (!form.eventType) missing.add("eventType")
+    if (!form.details) missing.add("details")
+    if (missing.size > 0) {
+      setErrors(missing)
+      showToast("Please fill in all required fields")
+      return
+    }
+    setErrors(new Set())
     setSubmitting(true)
     try {
       const res = await fetch("/api/submissions", {
@@ -184,10 +216,9 @@ export function CoffeeCartClient() {
                     First Name *
                   </label>
                   <input
-                    required
                     value={form.firstName}
                     onChange={(e) => set("firstName", e.target.value)}
-                    className="w-full border border-stone-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-amber-400 transition-colors bg-white"
+                    className={`w-full border ${borderClass("firstName")} rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-amber-400 transition-colors`}
                     placeholder="Jasmine"
                   />
                 </div>
@@ -196,10 +227,9 @@ export function CoffeeCartClient() {
                     Last Name *
                   </label>
                   <input
-                    required
                     value={form.lastName}
                     onChange={(e) => set("lastName", e.target.value)}
-                    className="w-full border border-stone-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-amber-400 transition-colors bg-white"
+                    className={`w-full border ${borderClass("lastName")} rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-amber-400 transition-colors`}
                     placeholder="Ryon"
                   />
                 </div>
@@ -212,11 +242,10 @@ export function CoffeeCartClient() {
                     Email *
                   </label>
                   <input
-                    required
                     type="email"
                     value={form.email}
                     onChange={(e) => set("email", e.target.value)}
-                    className="w-full border border-stone-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-amber-400 transition-colors bg-white"
+                    className={`w-full border ${borderClass("email")} rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-amber-400 transition-colors`}
                     placeholder="you@example.com"
                   />
                 </div>
@@ -227,7 +256,7 @@ export function CoffeeCartClient() {
                   <PhoneInput
                     value={form.phone}
                     onChange={(v) => set("phone", v)}
-                    className="w-full border border-stone-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-amber-400 transition-colors bg-white"
+                    className="w-full border border-stone-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-amber-400 transition-colors"
                     placeholder="(555) 000-0000"
                   />
                 </div>
@@ -240,11 +269,10 @@ export function CoffeeCartClient() {
                     Desired Event Date *
                   </label>
                   <input
-                    required
                     type="date"
                     value={form.eventDate}
                     onChange={(e) => set("eventDate", e.target.value)}
-                    className="w-full border border-stone-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-amber-400 transition-colors bg-white"
+                    className={`w-full border ${borderClass("eventDate")} rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-amber-400 transition-colors`}
                   />
                 </div>
                 <div>
@@ -252,10 +280,9 @@ export function CoffeeCartClient() {
                     Start Time *
                   </label>
                   <select
-                    required
                     value={form.startTime}
                     onChange={(e) => set("startTime", e.target.value)}
-                    className="w-full border border-stone-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-amber-400 transition-colors bg-white"
+                    className={`w-full border ${borderClass("startTime")} rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-amber-400 transition-colors`}
                   >
                     <option value="">Select a time</option>
                     {START_TIMES.map((t) => (
@@ -274,12 +301,12 @@ export function CoffeeCartClient() {
                     Estimated Guest Count *
                   </label>
                   <input
-                    required
                     type="number"
                     min="1"
                     value={form.guestCount}
                     onChange={(e) => set("guestCount", e.target.value)}
-                    className="w-full border border-stone-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-amber-400 transition-colors bg-white"
+                    onKeyDown={(e) => blockInvalidNumberKey(e)}
+                    className={`w-full border ${borderClass("guestCount")} rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-amber-400 transition-colors`}
                     placeholder="e.g. 25"
                   />
                 </div>
@@ -288,10 +315,9 @@ export function CoffeeCartClient() {
                     Event Type *
                   </label>
                   <select
-                    required
                     value={form.eventType}
                     onChange={(e) => set("eventType", e.target.value)}
-                    className="w-full border border-stone-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-amber-400 transition-colors bg-white"
+                    className={`w-full border ${borderClass("eventType")} rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-amber-400 transition-colors`}
                   >
                     <option value="">Select type</option>
                     {EVENT_TYPES.map((t) => (
@@ -311,7 +337,7 @@ export function CoffeeCartClient() {
                 <input
                   value={form.occasion}
                   onChange={(e) => set("occasion", e.target.value)}
-                  className="w-full border border-stone-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-amber-400 transition-colors bg-white"
+                  className="w-full border border-stone-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-amber-400 transition-colors"
                   placeholder="Birthday, anniversary, team milestone…"
                 />
               </div>
@@ -325,7 +351,7 @@ export function CoffeeCartClient() {
                   <select
                     value={form.flexible}
                     onChange={(e) => set("flexible", e.target.value)}
-                    className="w-full border border-stone-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-amber-400 transition-colors bg-white"
+                    className="w-full border border-stone-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-amber-400 transition-colors"
                   >
                     <option value="">Select</option>
                     <option>Yes, very flexible</option>
@@ -340,7 +366,7 @@ export function CoffeeCartClient() {
                   <select
                     value={form.howFound}
                     onChange={(e) => set("howFound", e.target.value)}
-                    className="w-full border border-stone-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-amber-400 transition-colors bg-white"
+                    className="w-full border border-stone-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-amber-400 transition-colors"
                   >
                     <option value="">Select</option>
                     {HOW_FOUND.map((h) => (
@@ -358,11 +384,10 @@ export function CoffeeCartClient() {
                   Tell us about your event *
                 </label>
                 <textarea
-                  required
                   rows={4}
                   value={form.details}
                   onChange={(e) => set("details", e.target.value)}
-                  className="w-full border border-stone-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-amber-400 transition-colors bg-white resize-none"
+                  className={`w-full border ${borderClass("details")} rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-amber-400 transition-colors resize-none`}
                   placeholder="Location, vibe, any special requests or ideas — the more detail the better!"
                 />
               </div>

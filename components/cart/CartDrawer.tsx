@@ -1,15 +1,30 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { XIcon, CoffeeBeanIcon, GiftIcon, ArrowsClockwiseIcon, TShirtIcon } from '@phosphor-icons/react';
-import { useCartStore } from '@/lib/store/cart';
+import { XIcon, CoffeeBeanIcon, ArrowsClockwiseIcon, TShirtIcon, ConfettiIcon } from '@phosphor-icons/react';
+import { useCartStore, sortCartItems } from '@/lib/store/cart';
 import { CheckoutModal } from '@/components/checkout/CheckoutModal';
 import { Button } from '@/components/ui/Button';
 import type { CartItem } from '@/lib/types';
 
 function CartItemThumb({ item }: { item: CartItem }) {
   const [imgError, setImgError] = useState(item.hasImage === false);
-  const showImg = item.type === 'coffee' && item.slug && !imgError;
+  const showImg = (item.type === 'coffee' || item.type === 'merch') && item.slug && !imgError;
+  const imgSrc = item.hasFrontBack
+    ? `/images/products/${item.slug}-front.png`
+    : `/images/products/${item.slug}.png`;
+
+  if (item.type === 'gift') {
+    return (
+      <div className="w-14 h-14 rounded-xl flex-shrink-0 overflow-hidden relative flex items-center justify-center">
+        <div
+          className="absolute inset-0 bg-cover bg-no-repeat"
+          style={{ backgroundImage: 'url(/images/values-bg.png)', backgroundPosition: 'center 20%' }}
+        />
+        <span className="relative font-serif text-sm text-stone-900">${item.price}</span>
+      </div>
+    );
+  }
 
   return (
     <div
@@ -18,13 +33,11 @@ function CartItemThumb({ item }: { item: CartItem }) {
     >
       {showImg ? (
         <img
-          src={`/images/products/${item.slug}.png`}
+          src={imgSrc}
           alt={item.name}
           className="w-full h-full object-cover"
           onError={() => setImgError(true)}
         />
-      ) : item.type === 'gift' ? (
-        <GiftIcon size={24} weight="duotone" color="white" />
       ) : item.type === 'sub' ? (
         <ArrowsClockwiseIcon size={24} weight="duotone" color="white" />
       ) : item.type === 'merch' ? (
@@ -106,7 +119,7 @@ export function CartDrawer() {
             </div>
           ) : (
             <div className="space-y-4">
-              {items.map((item) => (
+              {sortCartItems(items).map((item) => (
                 <div key={item.key} className="flex gap-3">
                   <CartItemThumb item={item} />
                   <div className="flex-1 min-w-0">
@@ -166,8 +179,9 @@ export function CartDrawer() {
                 Add ${(FREE_SHIPPING_THRESHOLD - subtotal).toFixed(2)} more for free shipping
               </p>
             ) : (
-              <p className="text-xs text-amber-700 text-center font-medium">
-                🎉 You&apos;ve unlocked free shipping!
+              <p className="text-xs text-amber-700 text-center font-medium flex items-center justify-center gap-1.5">
+                <ConfettiIcon size={16} weight="duotone" />
+                You&apos;ve unlocked free shipping!
               </p>
             )}
 

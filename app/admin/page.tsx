@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { prisma } from '@/lib/db';
+import { PackageIcon, NotePencilIcon, ReceiptIcon, TrayIcon, UsersIcon } from '@phosphor-icons/react/dist/ssr';
 
 export default async function AdminDashboard() {
   const [totalOrders, revenueResult, recentOrders, totalUsers, totalProducts, unreadSubmissions] = await Promise.all([
@@ -21,11 +22,11 @@ export default async function AdminDashboard() {
   };
 
   const quickLinks = [
-    { label: 'Manage Products', desc: 'Add, edit, or remove coffees, subscriptions & merch', href: '/admin/products', icon: '📦' },
-    { label: 'Edit Content', desc: 'Update homepage, about page & contact details', href: '/admin/content', icon: '✏️' },
-    { label: 'View Orders', desc: 'Full order history with customer details', href: '/admin/orders', icon: '🧾' },
-    { label: 'Submissions', desc: 'Contact, wholesale & coffee cart inquiries', href: '/admin/submissions', icon: '📬' },
-    { label: 'Manage Users', desc: 'Customer list and admin role management', href: '/admin/users', icon: '👥' },
+    { label: 'Manage Products', desc: 'Add, edit, or remove coffees, subscriptions & merch', href: '/admin/products', icon: PackageIcon },
+    { label: 'Edit Content', desc: 'Update homepage, about page & contact details', href: '/admin/content', icon: NotePencilIcon },
+    { label: 'View Orders', desc: 'Full order history with customer details', href: '/admin/orders', icon: ReceiptIcon },
+    { label: 'Submissions', desc: 'Contact, wholesale & coffee cart inquiries', href: '/admin/submissions', icon: TrayIcon },
+    { label: 'Manage Users', desc: 'Customer list and admin role management', href: '/admin/users', icon: UsersIcon },
   ];
 
   return (
@@ -60,7 +61,7 @@ export default async function AdminDashboard() {
             href={l.href}
             className="bg-white rounded-xl border border-stone-100 p-5 hover:border-amber-200 hover:shadow-sm transition-all group"
           >
-            <span className="text-2xl block mb-3">{l.icon}</span>
+            <l.icon size={28} weight="duotone" color="#C8921A" className="block mb-3" />
             <p className="font-medium text-stone-900 text-sm group-hover:text-amber-700 transition-colors">{l.label}</p>
             <p className="text-xs text-stone-400 mt-1 leading-relaxed">{l.desc}</p>
           </Link>

@@ -614,8 +614,8 @@ async function main() {
     { page: 'gift-cards', key: 'subheading', value: "Give the gift of something they've never tasted. Coastal Granny's gift cards can be used on any coffee, subscription, or merch." },
     { page: 'gift-cards', key: 'amounts', value: JSON.stringify([25, 40, 60, 80, 100, 150]) },
     { page: 'gift-cards', key: 'custom_heading', value: 'Choose a Custom Amount' },
-    { page: 'gift-cards', key: 'custom_body', value: 'Enter any amount between $10 and $500.' },
-    { page: 'gift-cards', key: 'custom_min', value: '10' },
+    { page: 'gift-cards', key: 'custom_body', value: 'Enter any amount between $20 and $500.' },
+    { page: 'gift-cards', key: 'custom_min', value: '20' },
     { page: 'gift-cards', key: 'custom_max', value: '500' },
   ];
 

@@ -59,6 +59,7 @@ export interface CartItem {
   icon?: string;
   slug?: string;
   hasImage?: boolean;
+  hasFrontBack?: boolean;
   qty: number;
 }
 

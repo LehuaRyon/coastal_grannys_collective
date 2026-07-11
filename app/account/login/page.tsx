@@ -6,21 +6,28 @@ import { signIn } from "next-auth/react"
 import Link from "next/link"
 import { useRouter, useSearchParams } from "next/navigation"
 import { Suspense, useState } from "react"
+import { useFormErrors } from "@/lib/hooks/useFormErrors"
 
 function LoginForm() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const callbackUrl = searchParams.get("callbackUrl") ?? "/shop/coffee"
+  const { setErrors, clearError, borderClass } = useFormErrors()
 
   const [form, setForm] = useState({ email: "", password: "" })
   const [loading, setLoading] = useState(false)
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
-    if (!form.email || !form.password) {
+    const missing = new Set<string>()
+    if (!form.email) missing.add("email")
+    if (!form.password) missing.add("password")
+    if (missing.size > 0) {
+      setErrors(missing)
       showToast("Please fill in all fields")
       return
     }
+    setErrors(new Set())
 
     setLoading(true)
     try {
@@ -61,29 +68,27 @@ function LoginForm() {
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
               <label className="block text-xs font-medium text-stone-600 mb-1">
-                Email
+                Email *
               </label>
               <input
                 type="email"
                 value={form.email}
-                onChange={(e) => setForm({ ...form, email: e.target.value })}
+                onChange={(e) => { setForm({ ...form, email: e.target.value }); clearError("email") }}
                 placeholder="jane@example.com"
-                className="w-full border border-stone-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-amber-400 transition-colors"
-                required
+                className={`w-full border ${borderClass("email")} rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-amber-400 transition-colors`}
                 autoComplete="email"
               />
             </div>
             <div>
               <label className="block text-xs font-medium text-stone-600 mb-1">
-                Password
+                Password *
               </label>
               <input
                 type="password"
                 value={form.password}
-                onChange={(e) => setForm({ ...form, password: e.target.value })}
+                onChange={(e) => { setForm({ ...form, password: e.target.value }); clearError("password") }}
                 placeholder="••••••••"
-                className="w-full border border-stone-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-amber-400 transition-colors"
-                required
+                className={`w-full border ${borderClass("password")} rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-amber-400 transition-colors`}
                 autoComplete="current-password"
               />
             </div>

@@ -65,7 +65,11 @@ export async function POST(request: NextRequest) {
         // Truncate if somehow over limit (safety net)
         items: itemsSummary.length <= 500 ? itemsSummary : itemsSummary.substring(0, 497) + '…',
       },
-      automatic_payment_methods: { enabled: true },
+      // Explicit list instead of automatic_payment_methods — restricts checkout to
+      // Card (Apple Pay / Google Pay show automatically inside it via the `wallets`
+      // option on PaymentElement) instead of surfacing every method enabled in the
+      // Stripe Dashboard (bank transfers, Cash App Pay, Affirm, Link, etc.).
+      payment_method_types: ['card'],
     });
 
     return NextResponse.json({ clientSecret: paymentIntent.client_secret });

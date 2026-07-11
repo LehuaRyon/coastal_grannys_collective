@@ -5,6 +5,7 @@ import { useSession } from 'next-auth/react';
 import { showToast } from '@/components/ui/Toast';
 import { Button } from '@/components/ui/Button';
 import { PhoneInput } from '@/components/ui/PhoneInput';
+import { useFormErrors } from '@/lib/hooks/useFormErrors';
 import Link from 'next/link';
 import { MapPinIcon, ClockIcon, EnvelopeSimpleIcon, PackageIcon, CheckCircleIcon } from '@phosphor-icons/react';
 
@@ -19,6 +20,7 @@ interface Details {
 
 export default function ContactPageClient({ details }: { details: Details }) {
   const { data: session } = useSession();
+  const { setErrors, clearError, borderClass } = useFormErrors();
   const [submitted, setSubmitted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [form, setForm] = useState({
@@ -41,11 +43,30 @@ export default function ContactPageClient({ details }: { details: Details }) {
     }));
   }, [session]);
 
+  // Phone isn't on the session — fetch it from the account's saved profile
+  useEffect(() => {
+    if (!session?.user) return;
+    fetch('/api/account/profile')
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        const phone = data?.user?.phone;
+        if (!phone) return;
+        setForm((f) => ({ ...f, phone: f.phone || phone }));
+      })
+      .catch(() => {});
+  }, [session]);
+
   async function handleSubmit() {
-    if (!form.firstName || !form.email || !form.message) {
+    const missing = new Set<string>();
+    if (!form.firstName) missing.add('firstName');
+    if (!form.email) missing.add('email');
+    if (!form.message) missing.add('message');
+    if (missing.size > 0) {
+      setErrors(missing);
       showToast('Please fill in all required fields');
       return;
     }
+    setErrors(new Set());
     setSubmitting(true);
     try {
       const res = await fetch('/api/submissions', {
@@ -135,9 +156,9 @@ export default function ContactPageClient({ details }: { details: Details }) {
                   <input
                     type="text"
                     value={form.firstName}
-                    onChange={(e) => setForm({ ...form, firstName: e.target.value })}
+                    onChange={(e) => { setForm({ ...form, firstName: e.target.value }); clearError('firstName'); }}
                     placeholder="Jane"
-                    className="w-full border border-stone-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-amber-400 transition-colors"
+                    className={`w-full border ${borderClass('firstName')} rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-amber-400 transition-colors`}
                   />
                 </div>
                 <div>
@@ -157,9 +178,9 @@ export default function ContactPageClient({ details }: { details: Details }) {
                   <input
                     type="email"
                     value={form.email}
-                    onChange={(e) => setForm({ ...form, email: e.target.value })}
+                    onChange={(e) => { setForm({ ...form, email: e.target.value }); clearError('email'); }}
                     placeholder="jane@example.com"
-                    className="w-full border border-stone-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-amber-400 transition-colors"
+                    className={`w-full border ${borderClass('email')} rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-amber-400 transition-colors`}
                   />
                 </div>
                 <div>
@@ -177,7 +198,7 @@ export default function ContactPageClient({ details }: { details: Details }) {
                 <select
                   value={form.subject}
                   onChange={(e) => setForm({ ...form, subject: e.target.value })}
-                  className="w-full border border-stone-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-amber-400 transition-colors bg-white"
+                  className="w-full border border-stone-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-amber-400 transition-colors"
                 >
                   <option>General inquiry</option>
                   <option>Order question</option>
@@ -191,10 +212,10 @@ export default function ContactPageClient({ details }: { details: Details }) {
                 <label className="block text-xs font-medium text-stone-600 mb-1">Message *</label>
                 <textarea
                   value={form.message}
-                  onChange={(e) => setForm({ ...form, message: e.target.value })}
+                  onChange={(e) => { setForm({ ...form, message: e.target.value }); clearError('message'); }}
                   placeholder="How can we help?"
                   rows={5}
-                  className="w-full border border-stone-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-amber-400 transition-colors resize-none"
+                  className={`w-full border ${borderClass('message')} rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-amber-400 transition-colors resize-none`}
                 />
               </div>
               <Button variant="primary" full onClick={handleSubmit} disabled={submitting}>

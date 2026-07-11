@@ -23,6 +23,19 @@ function clearAutoClose() {
   if (autoCloseTimer) { clearTimeout(autoCloseTimer); autoCloseTimer = null; }
 }
 
+// Coffee first, then subscriptions (coffee-adjacent), then merch, then gift cards last —
+// alphabetical by name within each group. Used anywhere cart items are listed
+// (cart drawer, checkout order summary) so the order is consistent everywhere.
+const TYPE_ORDER: Record<CartItem['type'], number> = { coffee: 0, sub: 1, merch: 2, gift: 3 };
+
+export function sortCartItems(items: CartItem[]): CartItem[] {
+  return [...items].sort((a, b) => {
+    const typeDiff = TYPE_ORDER[a.type] - TYPE_ORDER[b.type];
+    if (typeDiff !== 0) return typeDiff;
+    return a.name.localeCompare(b.name);
+  });
+}
+
 export const useCartStore = create<CartStore>()(
   persist(
     (set, get) => ({

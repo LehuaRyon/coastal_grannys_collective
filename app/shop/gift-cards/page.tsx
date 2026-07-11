@@ -17,8 +17,8 @@ export default async function GiftCardsPage() {
     subheading: db.subheading ?? 'The perfect gift for any coffee lover. Delivered instantly by email. Valid for everything in the shop including subscriptions.',
     amounts,
     customHeading: db.custom_heading ?? 'Send a Custom Amount',
-    customBody: db.custom_body ?? `Choose any amount between $${db.custom_min ?? '10'} and $${db.custom_max ?? '500'}. A personalized digital gift card will be emailed to the recipient instantly.`,
-    customMin: parseInt(db.custom_min ?? '10'),
+    customBody: db.custom_body ?? `Choose any amount between $${db.custom_min ?? '20'} and $${db.custom_max ?? '500'}. A personalized digital gift card will be emailed to the recipient instantly.`,
+    customMin: parseInt(db.custom_min ?? '20'),
     customMax: parseInt(db.custom_max ?? '500'),
   };
 

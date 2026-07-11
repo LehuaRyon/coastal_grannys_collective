@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { showToast } from '@/components/ui/Toast';
+import { blockInvalidNumberKey } from '@/lib/utils/numberInput';
 import type { Product } from '@prisma/client';
 
 type ProductInput = Partial<Omit<Product, 'id' | 'createdAt' | 'updatedAt'>>;
@@ -192,6 +193,7 @@ export default function ProductForm({ product }: { product?: Product }) {
               min="0"
               value={form.price ?? 0}
               onChange={(e) => set('price', parseFloat(e.target.value) || 0)}
+              onKeyDown={(e) => blockInvalidNumberKey(e, true)}
               className={inputClass}
             />
           </div>
@@ -202,6 +204,7 @@ export default function ProductForm({ product }: { product?: Product }) {
               min="0"
               value={form.position ?? 0}
               onChange={(e) => set('position', parseInt(e.target.value) || 0)}
+              onKeyDown={(e) => blockInvalidNumberKey(e)}
               className={inputClass}
             />
           </div>

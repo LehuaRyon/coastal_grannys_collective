@@ -29,7 +29,8 @@ export function AddressCard({ profile }: { profile: ProfileFields }) {
     city: profile.city ?? '',
     state: profile.state ?? '',
     zip: profile.zip ?? '',
-    country: profile.country ?? 'United States',
+    // US-only shipping — always saved as United States, not user-editable
+    country: 'United States',
   });
 
   function startEditing() {
@@ -40,7 +41,7 @@ export function AddressCard({ profile }: { profile: ProfileFields }) {
       city: saved.city ?? '',
       state: saved.state ?? '',
       zip: saved.zip ?? '',
-      country: saved.country ?? 'United States',
+      country: 'United States',
     });
     setEditing(true);
   }
@@ -171,13 +172,10 @@ export function AddressCard({ profile }: { profile: ProfileFields }) {
               <label className="block text-xs font-medium text-stone-600 mb-1">Country</label>
               <select
                 value={form.country}
-                onChange={(e) => setForm({ ...form, country: e.target.value })}
-                className={`${inputClass} bg-white`}
+                disabled
+                className={`${inputClass} bg-stone-100 text-stone-500 cursor-not-allowed`}
               >
                 <option>United States</option>
-                <option>Canada</option>
-                <option>United Kingdom</option>
-                <option>Australia</option>
               </select>
             </div>
           </div>

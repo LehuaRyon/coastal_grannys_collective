@@ -8,6 +8,7 @@
 import { useState, FormEvent } from 'react';
 import { PaymentElement, useStripe, useElements } from '@stripe/react-stripe-js';
 import { Button } from '@/components/ui/Button';
+import { LockIcon } from '@phosphor-icons/react';
 
 interface StripePaymentFormProps {
   total: number;
@@ -67,10 +68,10 @@ export function StripePaymentForm({ total, onSuccess, onBack }: StripePaymentFor
       )}
 
       <div className="flex gap-3 pt-1">
-        <Button type="button" variant="ghost" onClick={onBack} disabled={loading}>
+        <Button type="button" variant="ghost" className="flex-shrink-0" onClick={onBack} disabled={loading}>
           ← Back
         </Button>
-        <Button type="submit" variant="primary" full disabled={!stripe || !elements || loading}>
+        <Button type="submit" variant="primary" full className="flex-1" disabled={!stripe || !elements || loading}>
           {loading ? (
             <span className="flex items-center gap-2">
               <svg className="animate-spin w-4 h-4" viewBox="0 0 24 24" fill="none">
@@ -85,8 +86,9 @@ export function StripePaymentForm({ total, onSuccess, onBack }: StripePaymentFor
         </Button>
       </div>
 
-      <p className="text-center text-[11px] text-stone-400">
-        🔒 Payments are secured by Stripe. We never see or store your card details.
+      <p className="text-center text-[11px] text-stone-400 flex items-center justify-center gap-1">
+        <LockIcon size={12} weight="duotone" />
+        Payments are secured by Stripe. We never see or store your card details.
       </p>
     </form>
   );

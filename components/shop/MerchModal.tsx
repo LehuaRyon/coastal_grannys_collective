@@ -50,6 +50,7 @@ export function MerchModal({ product: m, onClose, onPrev, onNext, hasPrev, hasNe
       icon: m.icon,
       slug: m.slug,
       hasImage: m.hasImage,
+      hasFrontBack: m.hasFrontBack,
     })
     showToast(`"${m.name}" added to cart`)
     onClose()
