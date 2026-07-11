@@ -1,5 +1,6 @@
 import { FeaturedCoffeeCard } from "@/components/home/FeaturedCoffeeCard"
 import { Reveal } from "@/components/ui/Reveal"
+import { CountUpStat } from "@/components/ui/CountUpStat"
 import { dbToCoffee } from "@/lib/data/db-products"
 import { prisma } from "@/lib/db"
 import {
@@ -76,10 +77,13 @@ export default async function HomePage() {
           style={{ backgroundImage: "url(/images/hero-bg.png)" }}
         />
         <div className="relative max-w-7xl mx-auto px-4 sm:px-8 py-24 md:py-32 w-full">
-          <p className="text-amber-700 text-xs font-semibold uppercase tracking-[0.2em] mb-6">
+          <p className="animate-hero-fade-up text-amber-700 text-xs font-semibold uppercase tracking-[0.2em] mb-6">
             Coastal Granny&apos;s Collective · San Diego, CA
           </p>
-          <h1 className="font-serif text-5xl sm:text-6xl md:text-7xl lg:text-8xl leading-[0.95] mb-8 max-w-4xl text-stone-900 sm:whitespace-nowrap">
+          <h1
+            className="animate-hero-fade-up font-serif text-5xl sm:text-6xl md:text-7xl lg:text-8xl leading-[0.95] mb-8 max-w-4xl text-stone-900 sm:whitespace-nowrap"
+            style={{ animationDelay: "120ms" }}
+          >
             {heroTitle}
           </h1>
           <p className="text-stone-600 text-lg max-w-4xl mb-10 leading-relaxed">
@@ -113,12 +117,20 @@ export default async function HomePage() {
 
           <div className="mt-10 flex flex-wrap gap-10">
             {[
-              { n: "10+", label: "Origins" },
-              { n: "100%", label: "Roast to Order" },
+              { value: 10, suffix: "+", label: "Origins" },
+              { value: 100, suffix: "%", label: "Roast to Order" },
               { n: "SD", label: "San Diego" },
             ].map((s) => (
               <div key={s.label}>
-                <p className="font-serif text-3xl text-amber-700">{s.n}</p>
+                {typeof s.value === "number" ? (
+                  <CountUpStat
+                    value={s.value}
+                    suffix={s.suffix}
+                    className="font-serif text-3xl text-amber-700"
+                  />
+                ) : (
+                  <p className="font-serif text-3xl text-amber-700">{s.n}</p>
+                )}
                 <p className="text-xs text-stone-500 uppercase tracking-widest mt-0.5">
                   {s.label}
                 </p>

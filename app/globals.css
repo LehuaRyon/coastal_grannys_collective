@@ -111,3 +111,25 @@ body {
     animation: none;
   }
 }
+
+/* Hero eyebrow + headline — one-time fade-up on page load */
+@keyframes hero-fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-hero-fade-up {
+  animation: hero-fade-up 0.5s ease-out both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-hero-fade-up {
+    animation: none;
+  }
+}

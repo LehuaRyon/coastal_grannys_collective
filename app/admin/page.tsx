@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { prisma } from '@/lib/db';
 import { PackageIcon, NotePencilIcon, ReceiptIcon, TrayIcon, UsersIcon } from '@phosphor-icons/react/dist/ssr';
+import { CountUpStat } from '@/components/ui/CountUpStat';
 
 export default async function AdminDashboard() {
   const [totalOrders, revenueResult, recentOrders, totalUsers, totalProducts, unreadSubmissions] = await Promise.all([
@@ -39,16 +40,16 @@ export default async function AdminDashboard() {
       {/* Stats */}
       <div className="grid grid-cols-2 lg:grid-cols-6 gap-4">
         {[
-          { label: 'Total Orders', value: totalOrders.toLocaleString() },
-          { label: 'Revenue', value: `$${totalRevenue.toFixed(2)}` },
-          { label: 'Users', value: totalUsers.toLocaleString() },
-          { label: 'Avg Order', value: totalOrders > 0 ? `$${(totalRevenue / totalOrders).toFixed(2)}` : '$0.00' },
-          { label: 'Products', value: totalProducts.toLocaleString() },
-          { label: 'Unread Msgs', value: unreadSubmissions.toLocaleString() },
+          { label: 'Total Orders', value: totalOrders },
+          { label: 'Revenue', value: totalRevenue, prefix: '$', decimals: 2 },
+          { label: 'Users', value: totalUsers },
+          { label: 'Avg Order', value: totalOrders > 0 ? totalRevenue / totalOrders : 0, prefix: '$', decimals: 2 },
+          { label: 'Products', value: totalProducts },
+          { label: 'Unread Msgs', value: unreadSubmissions },
         ].map((stat) => (
           <div key={stat.label} className="bg-white rounded-xl border border-stone-100 p-5">
             <p className="text-xs text-stone-500 font-medium">{stat.label}</p>
-            <p className="font-serif text-2xl text-stone-900 mt-1">{stat.value}</p>
+            <CountUpStat value={stat.value} prefix={stat.prefix} decimals={stat.decimals} />
           </div>
         ))}
       </div>
