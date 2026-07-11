@@ -78,6 +78,8 @@ model VerificationToken {
 
 model Order {
   id              String      @id @default(cuid())
+  // Real Stripe PaymentIntent id, or a synthetic `giftcard_<cuid>` id for
+  // orders fully covered by gift card balance (no card charge at all).
   stripePaymentId String      @unique
   amount          Float
   currency        String      @default("usd")
@@ -91,21 +93,63 @@ model Order {
   createdAt       DateTime    @default(now())
   updatedAt       DateTime    @updatedAt
 
+  // Gift card redemption — this order applied one or more gift cards toward its total
+  giftCardRedemptions GiftCardRedemption[]
+
+  // Gift card purchase — this order is the one where one or more gift cards were bought
+  giftCardsPurchased GiftCard[] @relation("GiftCardPurchase")
+
   @@index([customerEmail])
   @@index([userId])
   @@index([createdAt])
   @@index([status])
 }
 
+// A redeemable e-gift card. Created when a gift-type OrderItem's order is paid;
+// spent (partially or fully, across any number of future orders) by code at checkout.
+model GiftCard {
+  id              String               @id @default(cuid())
+  code            String               @unique
+  initialBalance  Float
+  balance         Float
+  senderName      String?
+  recipientEmail  String
+  message         String?
+  purchaseOrderId String?
+  purchaseOrder   Order?               @relation("GiftCardPurchase", fields: [purchaseOrderId], references: [id], onDelete: SetNull)
+  redemptions     GiftCardRedemption[]
+  createdAt       DateTime             @default(now())
+  updatedAt       DateTime             @updatedAt
+
+  @@index([recipientEmail])
+}
+
+// Join row — one order can redeem multiple gift cards, and one gift card can
+// be redeemed (partially) across many separate orders over time.
+model GiftCardRedemption {
+  id         String   @id @default(cuid())
+  orderId    String
+  order      Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  giftCardId String
+  giftCard   GiftCard @relation(fields: [giftCardId], references: [id], onDelete: Restrict)
+  amount     Float
+  createdAt  DateTime @default(now())
+
+  @@index([orderId])
+  @@index([giftCardId])
+}
+
 model OrderItem {
-  id        String @id @default(cuid())
-  orderId   String
-  order     Order  @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  productId String
-  name      String
-  variant   String
-  price     Float
-  qty       Int
+  id                 String  @id @default(cuid())
+  orderId            String
+  order              Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  productId          String
+  name               String
+  variant            String
+  price              Float
+  qty                Int
+  giftRecipientEmail String?
+  giftMessage        String?
 }
 
 // ─── Products ────────────────────────────────────────────────

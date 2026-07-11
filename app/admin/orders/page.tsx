@@ -20,7 +20,7 @@ import { OrderStatusSelect } from '@/components/admin/OrderStatusSelect';
 export default async function AdminOrdersPage() {
   const orders = await prisma.order.findMany({
     orderBy: { createdAt: 'desc' },
-    include: { items: true },
+    include: { items: true, giftCardRedemptions: { include: { giftCard: { select: { code: true } } } } },
   });
 
   const total = orders.filter((o) => o.status === 'paid').reduce((s, o) => s + o.amount, 0);
@@ -67,7 +67,14 @@ export default async function AdminOrdersPage() {
                       <td className="px-6 py-4 text-xs text-stone-500">
                         {addr ? `${addr.address ?? ''}, ${addr.city ?? ''} ${addr.state ?? ''}`.trim().replace(/^,\s*/, '') : '—'}
                       </td>
-                      <td className="px-6 py-4 font-medium text-stone-900">${order.amount.toFixed(2)}</td>
+                      <td className="px-6 py-4 font-medium text-stone-900">
+                        ${order.amount.toFixed(2)}
+                        {order.giftCardRedemptions.map((r) => (
+                          <span key={r.id} className="block text-[10px] font-normal text-amber-700 mt-0.5">
+                            −${r.amount.toFixed(2)} gift card ({r.giftCard.code})
+                          </span>
+                        ))}
+                      </td>
                       <td className="px-6 py-4">
                         <OrderStatusSelect orderId={order.id} initialStatus={order.status} />
                       </td>

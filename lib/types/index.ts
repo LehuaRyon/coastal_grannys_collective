@@ -60,6 +60,8 @@ export interface CartItem {
   slug?: string;
   hasImage?: boolean;
   hasFrontBack?: boolean;
+  giftRecipientEmail?: string;
+  giftMessage?: string;
   qty: number;
 }
 

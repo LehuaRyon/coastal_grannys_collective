@@ -24,28 +24,20 @@ export function GiftCardsPageClient({
 }: {
   content: GiftCardsContent
 }) {
-  const { addItem, items } = useCartStore()
+  const { addItem } = useCartStore()
   const { setErrors, clearError, borderClass } = useFormErrors()
-  const [customAmount, setCustomAmount] = useState("")
+  const [amount, setAmount] = useState("")
   const [recipientEmail, setRecipientEmail] = useState("")
   const [message, setMessage] = useState("")
 
-  function addGiftCard(amt: number) {
-    addItem({
-      key: `gc-${amt}`,
-      id: `gc-${amt}`,
-      type: "gift",
-      name: `$${amt} E-Gift Card`,
-      variant: "Digital",
-      price: amt,
-      gradient: GIFT_GRADIENT,
-      icon: "🎁",
-    })
-    showToast(`$${amt} gift card added to cart`)
+  function selectPreset(amt: number) {
+    setAmount(String(amt))
+    clearError("customAmount")
+    document.getElementById("gift-form")?.scrollIntoView({ behavior: "smooth", block: "center" })
   }
 
-  function addCustomGift() {
-    const amt = parseInt(customAmount)
+  function addGiftCard() {
+    const amt = parseInt(amount)
     const missing = new Set<string>()
     if (!amt || amt < content.customMin || amt > content.customMax)
       missing.add("customAmount")
@@ -61,17 +53,19 @@ export function GiftCardsPageClient({
     }
     setErrors(new Set())
     addItem({
-      key: `gc-custom-${amt}-${recipientEmail}`,
-      id: `gc-custom-${amt}`,
+      key: `gc-${amt}-${recipientEmail}`,
+      id: `gc-${amt}`,
       type: "gift",
       name: `$${amt} E-Gift Card`,
       variant: `To: ${recipientEmail}`,
       price: amt,
       gradient: GIFT_GRADIENT,
       icon: "🎁",
+      giftRecipientEmail: recipientEmail,
+      giftMessage: message.trim() || undefined,
     })
     showToast(`$${amt} gift card for ${recipientEmail} added to cart`)
-    setCustomAmount("")
+    setAmount("")
     setRecipientEmail("")
     setMessage("")
   }
@@ -90,17 +84,18 @@ export function GiftCardsPageClient({
         </p>
       </div>
 
-      {/* Preset amounts */}
+      {/* Preset amounts — selecting one fills the amount below; every gift card
+          still requires a recipient email before it can be added to the cart. */}
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 mb-12">
         {content.amounts.map((amt) => {
-          const cartQty = items
-            .filter((i) => i.id === `gc-${amt}`)
-            .reduce((sum, i) => sum + i.qty, 0)
+          const active = parseInt(amount) === amt
           return (
             <div
               key={amt}
-              className="relative rounded-2xl overflow-hidden cursor-pointer group border border-stone-100 shadow-sm hover:shadow-md hover:border-stone-200 transition-all duration-300"
-              onClick={() => addGiftCard(amt)}
+              className={`relative rounded-2xl overflow-hidden cursor-pointer group border shadow-sm hover:shadow-md transition-all duration-300 ${
+                active ? "border-amber-400 ring-2 ring-amber-200" : "border-stone-100 hover:border-stone-200"
+              }`}
+              onClick={() => selectPreset(amt)}
             >
               <div
                 className="absolute inset-0 bg-cover bg-no-repeat transition-transform duration-500 group-hover:scale-105"
@@ -113,22 +108,26 @@ export function GiftCardsPageClient({
                 <p className="text-3xl font-serif text-stone-900 mb-1 group-hover:text-amber-700 transition-colors">
                   ${amt}
                 </p>
-                <p className="text-stone-600 text-xs mb-1">E-Gift Card</p>
-                <p className="text-[10px] text-amber-700 font-medium mb-4 h-4">
-                  {cartQty > 0 ? `${cartQty} in cart` : ""}
-                </p>
-                <button className="w-full py-2 bg-amber-700 hover:bg-amber-600 text-white text-sm font-medium rounded-full transition-colors">
-                  Add to Cart
-                </button>
+                <p className="text-stone-600 text-xs mb-4">E-Gift Card</p>
+                <span
+                  className={`inline-block w-full py-2 text-sm font-medium rounded-full transition-colors ${
+                    active
+                      ? "bg-amber-700 text-white"
+                      : "bg-stone-100 text-stone-600 group-hover:bg-stone-200"
+                  }`}
+                >
+                  {active ? "Selected ✓" : "Select"}
+                </span>
               </div>
             </div>
           )
         })}
       </div>
 
-      {/* Custom amount */}
+      {/* Amount + recipient — required for every gift card, preset or custom */}
       <div
-        className="relative rounded-2xl shadow-sm overflow-hidden"
+        id="gift-form"
+        className="relative rounded-2xl shadow-sm overflow-hidden scroll-mt-24"
         style={{ backgroundColor: "#F5EFE6" }}
       >
         <div
@@ -151,9 +150,9 @@ export function GiftCardsPageClient({
               </label>
               <input
                 type="number"
-                value={customAmount}
+                value={amount}
                 onChange={(e) => {
-                  setCustomAmount(e.target.value)
+                  setAmount(e.target.value)
                   clearError("customAmount")
                 }}
                 onKeyDown={(e) => blockInvalidNumberKey(e)}
@@ -193,8 +192,8 @@ export function GiftCardsPageClient({
             />
           </div>
 
-          <Button variant="primary" onClick={addCustomGift}>
-            Add Custom Gift Card →
+          <Button variant="primary" onClick={addGiftCard}>
+            Add Gift Card to Cart →
           </Button>
         </div>
       </div>

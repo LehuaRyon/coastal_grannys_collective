@@ -66,9 +66,101 @@ export function CheckoutModal({ isOpen, onClose }: CheckoutModalProps) {
     country: "United States",
   })
 
+  // Gift card redemption — only coffee & merch items are eligible, not
+  // subscriptions (an ongoing commitment) or other gift cards. Multiple
+  // cards can be stacked on one order (up to MAX_GIFT_CARDS), applied
+  // greedily in the order they were added against whatever eligible
+  // subtotal is left after the ones before them.
+  const MAX_GIFT_CARDS = 5
+  const [giftCodeInput, setGiftCodeInput] = useState("")
+  const [appliedGiftCards, setAppliedGiftCards] = useState<{ code: string; balance: number }[]>([])
+  const [giftCardError, setGiftCardError] = useState<string | null>(null)
+  const [giftCardChecking, setGiftCardChecking] = useState(false)
+  const [finalChargeAmount, setFinalChargeAmount] = useState<number | null>(null)
+  const [fullyCoveredByGiftCard, setFullyCoveredByGiftCard] = useState(false)
+
   const subtotal = total()
   const shippingCost = subtotal >= 60 ? 0 : 8
-  const grandTotal = subtotal + shippingCost
+  const eligibleSubtotal = items
+    .filter((i) => i.type === "coffee" || i.type === "merch")
+    .reduce((sum, i) => sum + i.price * i.qty, 0)
+
+  // Gift cards pay down eligible product cost first; once that's fully
+  // covered, any balance left over spills into paying shipping too — so a
+  // card that covers everything results in a true $0 order, not just free
+  // product with shipping still owed.
+  const giftCardAllocations = (() => {
+    let remainingProduct = eligibleSubtotal
+    let remainingShipping = shippingCost
+    const allocations: { code: string; amount: number }[] = []
+    for (const gc of appliedGiftCards) {
+      if (remainingProduct <= 0 && remainingShipping <= 0) break
+      let balanceLeft = gc.balance
+      let used = 0
+      if (remainingProduct > 0) {
+        const use = Math.min(balanceLeft, remainingProduct)
+        used += use
+        remainingProduct -= use
+        balanceLeft -= use
+      }
+      if (remainingProduct <= 0 && remainingShipping > 0 && balanceLeft > 0) {
+        const use = Math.min(balanceLeft, remainingShipping)
+        used += use
+        remainingShipping -= use
+        balanceLeft -= use
+      }
+      if (used > 0) allocations.push({ code: gc.code, amount: used })
+    }
+    return allocations
+  })()
+  const giftCardDiscount = giftCardAllocations.reduce((sum, a) => sum + a.amount, 0)
+  const grandTotal = Math.max(0, subtotal + shippingCost - giftCardDiscount)
+
+  async function applyGiftCard() {
+    const code = giftCodeInput.trim().toUpperCase()
+    if (!code) return
+    if (appliedGiftCards.some((gc) => gc.code === code)) {
+      setGiftCardError("That code is already applied")
+      return
+    }
+    if (appliedGiftCards.length >= MAX_GIFT_CARDS) {
+      setGiftCardError(`Only ${MAX_GIFT_CARDS} gift cards can be applied per order`)
+      return
+    }
+    setGiftCardChecking(true)
+    setGiftCardError(null)
+    try {
+      const res = await fetch("/api/gift-cards/validate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ code }),
+      })
+      const data = await res.json()
+      if (!data.valid) {
+        setGiftCardError(data.error ?? "That code isn't valid")
+        return
+      }
+      if (eligibleSubtotal <= 0) {
+        setGiftCardError("Gift cards can only be applied to coffee or merch items")
+        return
+      }
+      setAppliedGiftCards((prev) => [...prev, { code, balance: data.balance }])
+      setGiftCodeInput("")
+      setClientSecret(null)
+      setFinalChargeAmount(null)
+    } catch {
+      setGiftCardError("Couldn't check that code — please try again")
+    } finally {
+      setGiftCardChecking(false)
+    }
+  }
+
+  function removeGiftCard(code: string) {
+    setAppliedGiftCards((prev) => prev.filter((gc) => gc.code !== code))
+    setGiftCardError(null)
+    setClientSecret(null)
+    setFinalChargeAmount(null)
+  }
 
   // Prefill contact info from the logged-in user's session, without clobbering anything already typed
   useEffect(() => {
@@ -122,30 +214,47 @@ export function CheckoutModal({ isOpen, onClose }: CheckoutModalProps) {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        amount: grandTotal,
+        // Undiscounted — the server independently re-validates each gift
+        // card's real balance and computes the actual discount, rather than
+        // trusting a client-computed total.
+        amount: subtotal + shippingCost,
+        shippingCost,
+        giftCardCodes: appliedGiftCards.map((gc) => gc.code),
         customerEmail: contact.email,
         customerName: `${contact.firstName} ${contact.lastName}`.trim(),
         shippingAddress: shipping,
         items: items.map((i) => ({
           key: i.key,
           id: i.id,
+          type: i.type,
           name: i.name,
           variant: i.variant,
           price: i.price,
           qty: i.qty,
+          giftRecipientEmail: i.giftRecipientEmail,
+          giftMessage: i.giftMessage,
         })),
       }),
     })
       .then((r) => r.json())
       .then((data) => {
         if (data.error) throw new Error(data.error)
+        if (data.fullyCovered) {
+          // Gift card balance covered the whole order — nothing to charge,
+          // so there's no Stripe payment step at all.
+          setFullyCoveredByGiftCard(true)
+          clearCart()
+          setStep("confirmed")
+          return
+        }
         setClientSecret(data.clientSecret)
+        setFinalChargeAmount(data.amount)
       })
       .catch((err: Error) => {
         setPaymentError(err.message)
       })
       .finally(() => setLoadingIntent(false))
-  }, [step, clientSecret, grandTotal])
+  }, [step, clientSecret, subtotal, shippingCost, appliedGiftCards, clearCart])
 
   // Confetti burst on order confirmation — brand colors, skipped for
   // prefers-reduced-motion since it's a purely celebratory flourish.
@@ -181,6 +290,11 @@ export function CheckoutModal({ isOpen, onClose }: CheckoutModalProps) {
       setClientSecret(null)
       setPaymentError(null)
       setErrors(new Set())
+      setAppliedGiftCards([])
+      setGiftCodeInput("")
+      setGiftCardError(null)
+      setFinalChargeAmount(null)
+      setFullyCoveredByGiftCard(false)
     }, 300)
   }
 
@@ -218,11 +332,62 @@ export function CheckoutModal({ isOpen, onClose }: CheckoutModalProps) {
               {shippingCost === 0 ? "Free" : `$${shippingCost.toFixed(2)}`}
             </span>
           </div>
+          {giftCardAllocations.map((a) => (
+            <div key={a.code} className="flex justify-between text-sm text-amber-700">
+              <span>Gift card ({a.code})</span>
+              <span>−${a.amount.toFixed(2)}</span>
+            </div>
+          ))}
           <div className="flex justify-between text-sm font-semibold text-stone-900">
             <span>Total</span>
             <span>${grandTotal.toFixed(2)}</span>
           </div>
         </div>
+      </div>
+
+      {/* Gift card redemption — coffee & merch only, up to MAX_GIFT_CARDS per order */}
+      <div className="border-t border-stone-200 mt-3 pt-3 space-y-2">
+        {appliedGiftCards.map((gc) => (
+          <div key={gc.code} className="flex items-center justify-between text-xs">
+            <span className="text-stone-600">
+              Applied <span className="font-semibold text-stone-800">{gc.code}</span> — $
+              {gc.balance.toFixed(2)} available
+            </span>
+            <button
+              type="button"
+              onClick={() => removeGiftCard(gc.code)}
+              className="text-red-600 hover:underline font-medium"
+            >
+              Remove
+            </button>
+          </div>
+        ))}
+        {appliedGiftCards.length < MAX_GIFT_CARDS && (
+          <div>
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={giftCodeInput}
+                onChange={(e) => {
+                  setGiftCodeInput(e.target.value)
+                  setGiftCardError(null)
+                }}
+                onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), applyGiftCard())}
+                placeholder="Gift card code"
+                className="flex-1 min-w-0 border border-stone-200 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-amber-400 transition-colors"
+              />
+              <button
+                type="button"
+                onClick={applyGiftCard}
+                disabled={giftCardChecking || !giftCodeInput.trim()}
+                className="shrink-0 px-3 py-2 text-xs font-medium rounded-lg bg-stone-900 text-white hover:bg-stone-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {giftCardChecking ? "Checking…" : "Apply"}
+              </button>
+            </div>
+            {giftCardError && <p className="text-xs text-red-600 mt-1.5">{giftCardError}</p>}
+          </div>
+        )}
       </div>
     </div>
   )
@@ -279,7 +444,9 @@ export function CheckoutModal({ isOpen, onClose }: CheckoutModalProps) {
               ship within 1–2 business days.
             </p>
             <p className="text-xs text-stone-400 mb-8">
-              A receipt has been sent to your email by Stripe.
+              {fullyCoveredByGiftCard
+                ? "This order was fully covered by gift card balance — a confirmation has been sent to your email."
+                : "A receipt has been sent to your email by Stripe."}
             </p>
             <Button variant="primary" onClick={handleClose}>
               Continue Shopping
@@ -558,7 +725,7 @@ export function CheckoutModal({ isOpen, onClose }: CheckoutModalProps) {
                     }}
                   >
                     <StripePaymentForm
-                      total={grandTotal}
+                      total={finalChargeAmount ?? grandTotal}
                       onSuccess={handlePaymentSuccess}
                       onBack={() => setStep(2)}
                     />

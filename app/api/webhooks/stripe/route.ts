@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import Stripe from 'stripe';
-import { Prisma } from '@prisma/client';
 import { prisma } from '@/lib/db';
+import { fulfillOrder, CompactOrderItem, GiftPurchaseEntry, GiftRedemptionEntry } from '@/lib/orderFulfillment';
 
 function getStripeClient(): Stripe {
   const key = process.env.STRIPE_SECRET_KEY;
@@ -75,17 +75,7 @@ export async function POST(request: NextRequest) {
 }
 
 async function handlePaymentSucceeded(pi: Stripe.PaymentIntent) {
-  // Avoid duplicate order creation if Stripe retries the webhook
-  const existing = await prisma.order.findUnique({
-    where: { stripePaymentId: pi.id },
-  });
-  if (existing) {
-    console.log(`Order already exists for PaymentIntent ${pi.id} — skipping`);
-    return;
-  }
-
-  // Parse metadata stored when the PaymentIntent was created
-  const { customerEmail, customerName, shippingAddress, items } = pi.metadata;
+  const { customerEmail, customerName, shippingAddress, items, giftDetails, redeemGiftCards } = pi.metadata;
 
   let parsedAddress: object | null = null;
   try {
@@ -94,51 +84,36 @@ async function handlePaymentSucceeded(pi: Stripe.PaymentIntent) {
     console.warn('Could not parse shippingAddress metadata');
   }
 
-  interface CompactItem {
-    id: string;
-    n: string;
-    v: string;
-    p: number;
-    q: number;
-  }
-
-  let parsedItems: CompactItem[] = [];
+  let parsedItems: CompactOrderItem[] = [];
   try {
     parsedItems = items ? JSON.parse(items) : [];
   } catch {
     console.warn('Could not parse items metadata');
   }
 
-  // Link to an existing account if the email matches a registered user
-  let userId: string | null = null;
-  if (customerEmail) {
-    const user = await prisma.user.findUnique({ where: { email: customerEmail }, select: { id: true } });
-    if (user) userId = user.id;
+  let giftPurchases: GiftPurchaseEntry[] = [];
+  try {
+    giftPurchases = giftDetails ? JSON.parse(giftDetails) : [];
+  } catch {
+    console.warn('Could not parse giftDetails metadata');
   }
 
-  await prisma.order.create({
-    data: {
-      stripePaymentId: pi.id,
-      amount: pi.amount / 100, // convert cents → dollars
-      currency: pi.currency,
-      status: 'paid',
-      customerEmail: customerEmail || null,
-      customerName: customerName || null,
-      shippingAddress: (parsedAddress ?? Prisma.JsonNull) as Prisma.InputJsonValue,
-      userId,
-      items: {
-        create: parsedItems.map((item) => ({
-          productId: item.id,
-          name: item.n,
-          variant: item.v,
-          price: item.p,
-          qty: item.q,
-        })),
-      },
-    },
-  });
+  let giftRedemptions: GiftRedemptionEntry[] = [];
+  try {
+    giftRedemptions = redeemGiftCards ? JSON.parse(redeemGiftCards) : [];
+  } catch {
+    console.warn('Could not parse redeemGiftCards metadata');
+  }
 
-  console.log(
-    `✅ Order saved — PaymentIntent ${pi.id} | $${pi.amount / 100} | ${customerEmail}`
-  );
+  await fulfillOrder({
+    stripePaymentId: pi.id,
+    amount: pi.amount / 100, // convert cents → dollars
+    currency: pi.currency,
+    customerEmail: customerEmail || null,
+    customerName: customerName || null,
+    shippingAddress: parsedAddress,
+    items: parsedItems,
+    giftPurchases,
+    giftRedemptions,
+  });
 }
