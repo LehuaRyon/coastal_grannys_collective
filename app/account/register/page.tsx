@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/Button"
 import { PhoneInput } from "@/components/ui/PhoneInput"
 import { showToast } from "@/components/ui/Toast"
 import { useFormErrors } from "@/lib/hooks/useFormErrors"
+import { sanitizeZip } from "@/lib/utils/numberInput"
 import { signIn } from "next-auth/react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
@@ -286,8 +287,9 @@ export default function RegisterPage() {
                 <input
                   type="text"
                   value={form.zip}
-                  onChange={(e) => setForm({ ...form, zip: e.target.value })}
+                  onChange={(e) => setForm({ ...form, zip: sanitizeZip(e.target.value) })}
                   placeholder="94103"
+                  maxLength={5}
                   className="w-full border border-stone-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-amber-400 transition-colors"
                   autoComplete="postal-code"
                 />

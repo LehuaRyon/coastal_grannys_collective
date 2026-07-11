@@ -6,6 +6,7 @@ import { PhoneInput } from "@/components/ui/PhoneInput"
 import { showToast } from "@/components/ui/Toast"
 import { useFormErrors } from "@/lib/hooks/useFormErrors"
 import { sortCartItems, useCartStore } from "@/lib/store/cart"
+import { sanitizeZip } from "@/lib/utils/numberInput"
 import { getStripe } from "@/lib/stripe"
 import { CheckCircleIcon } from "@phosphor-icons/react"
 import { Elements } from "@stripe/react-stripe-js"
@@ -232,7 +233,7 @@ export function CheckoutModal({ isOpen, onClose }: CheckoutModalProps) {
   )
 
   return (
-    <Modal isOpen={isOpen} onClose={handleClose} className="max-w-xl">
+    <Modal isOpen={isOpen} onClose={handleClose} className="max-w-xl" closeOnBackdropClick={false}>
       <div className="p-6 sm:p-8">
         {step === "confirmed" ? (
           <div className="text-center py-6">
@@ -425,10 +426,11 @@ export function CheckoutModal({ isOpen, onClose }: CheckoutModalProps) {
                       type="text"
                       value={shipping.zip}
                       onChange={(e) => {
-                        setShipping({ ...shipping, zip: e.target.value })
+                        setShipping({ ...shipping, zip: sanitizeZip(e.target.value) })
                         clearError("zip")
                       }}
                       placeholder="94103"
+                      maxLength={5}
                       className={`w-full border ${borderClass("zip")} rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-amber-400 transition-colors`}
                     />
                   </div>

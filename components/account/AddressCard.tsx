@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { showToast } from '@/components/ui/Toast';
 import { Button } from '@/components/ui/Button';
 import { PhoneInput } from '@/components/ui/PhoneInput';
+import { sanitizeZip } from '@/lib/utils/numberInput';
 
 interface ProfileFields {
   phone: string | null;
@@ -163,8 +164,9 @@ export function AddressCard({ profile }: { profile: ProfileFields }) {
               <input
                 type="text"
                 value={form.zip}
-                onChange={(e) => setForm({ ...form, zip: e.target.value })}
+                onChange={(e) => setForm({ ...form, zip: sanitizeZip(e.target.value) })}
                 placeholder="94103"
+                maxLength={5}
                 className={inputClass}
               />
             </div>

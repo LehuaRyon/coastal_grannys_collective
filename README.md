@@ -377,6 +377,10 @@ When you're ready to go live, swap in live Stripe keys in Vercel (not in `.env.l
    - Copy the webhook's signing secret → `RESEND_WEBHOOK_SECRET` in `.env.local` and Vercel
    - Set `INBOUND_EMAIL_DOMAIN` to the subdomain used above
    - Needs a live HTTPS deploy — the webhook endpoint can't be tested against localhost
+8. **Register your domain for Apple Pay** — without this, the Apple Pay button silently never appears in production (Stripe's `localhost` test-mode exception won't apply once you're live):
+   - Stripe Dashboard → Settings → Payment methods → Apple Pay → Add a new domain → enter your production domain
+   - Stripe hosts a verification file at a well-known URL on your domain automatically — no action needed beyond adding the domain
+   - Note: Apple Pay only ever renders in Safari (macOS/iOS/iPadOS) — it's a Safari-only API, not a Stripe or app limitation, so it will never show in Chrome/Firefox/Edge regardless of this step
 
 ---
 
@@ -472,7 +476,7 @@ This likely needs a new admin settings model (e.g. `SiteVisibilitySettings`) sto
 - ✅ Contact and About pages with DB-backed content
 - ✅ Persistent cart (survives page refresh)
 - ✅ 3-step checkout (Contact → Shipping → Payment)
-- ✅ Stripe payments (card, Apple Pay, Google Pay, Stripe Link)
+- ✅ Stripe payments — restricted to card, Apple Pay, and Google Pay only (Bank, Klarna, Link, and other Stripe-enabled methods turned off in the account's Payment Method Configuration)
 - ✅ Webhook-backed order storage in PostgreSQL
 - ✅ Refund handling via webhook
 - ✅ Stripe receipt emails

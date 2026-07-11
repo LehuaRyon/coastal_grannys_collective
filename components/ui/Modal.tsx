@@ -14,6 +14,9 @@ interface ModalProps {
   onNext?: () => void;
   hasPrev?: boolean;
   hasNext?: boolean;
+  // Set false for modals with a lot of typed state (e.g. multi-step checkout)
+  // where an accidental backdrop click shouldn't wipe out what the user entered.
+  closeOnBackdropClick?: boolean;
 }
 
 export function Modal({
@@ -25,6 +28,7 @@ export function Modal({
   onNext,
   hasPrev = false,
   hasNext = false,
+  closeOnBackdropClick = true,
 }: ModalProps) {
   const backdropRef = useRef<HTMLDivElement>(null);
 
@@ -56,7 +60,7 @@ export function Modal({
       ref={backdropRef}
       className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
       onClick={(e) => {
-        if (e.target === backdropRef.current) onClose();
+        if (closeOnBackdropClick && e.target === backdropRef.current) onClose();
       }}
     >
       {/* Sizing wrapper — carries the same max-width as the card so the arrow
