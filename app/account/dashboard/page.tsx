@@ -57,12 +57,31 @@ export default async function AccountDashboard() {
 
   // Live balance — reflects redemptions made either as a guest or logged in,
   // since gift cards are tracked by recipient email/code, not by session.
-  // Undelivered (scheduled-for-later) cards are excluded so a surprise gift
-  // doesn't show up on the recipient's dashboard before it's actually sent.
   const giftCards = await prisma.giftCard.findMany({
     where: { recipientEmail: user.email, delivered: true },
     orderBy: [{ balance: 'desc' }, { createdAt: 'desc' }],
-    select: { code: true, balance: true, initialBalance: true, createdAt: true },
+    select: {
+      code: true,
+      balance: true,
+      initialBalance: true,
+      createdAt: true,
+      redemptions: {
+        orderBy: { createdAt: 'desc' },
+        select: { id: true, amount: true, createdAt: true, orderId: true },
+      },
+    },
+  });
+
+  // Cards addressed to this email but not yet sent — most commonly a
+  // self-gift scheduled for a future date (e.g. "deliver on my birthday").
+  // Shown separately since there's no code/balance to act on until it's
+  // actually delivered — a surprise gift from someone else still shouldn't
+  // spoil early, but the buyer's own scheduled purchase shouldn't just
+  // vanish from their account until then either.
+  const scheduledGiftCards = await prisma.giftCard.findMany({
+    where: { recipientEmail: user.email, delivered: false, deliverOn: { gt: new Date() } },
+    orderBy: { deliverOn: 'asc' },
+    select: { id: true, initialBalance: true, deliverOn: true },
   });
 
   return (
@@ -116,8 +135,33 @@ export default async function AccountDashboard() {
               </span>
             </div>
             <GiftCardList
-              giftCards={giftCards.map((gc) => ({ ...gc, createdAt: gc.createdAt.toISOString() }))}
+              giftCards={giftCards.map((gc) => ({
+                ...gc,
+                createdAt: gc.createdAt.toISOString(),
+                redemptions: gc.redemptions.map((r) => ({ ...r, createdAt: r.createdAt.toISOString() })),
+              }))}
             />
+          </div>
+        )}
+
+        {scheduledGiftCards.length > 0 && (
+          <div className="bg-white rounded-2xl border border-stone-100 shadow-sm overflow-hidden mb-8">
+            <div className="px-6 py-4 border-b border-stone-100">
+              <h2 className="font-medium text-stone-900">Scheduled Gift Cards</h2>
+              <p className="text-xs text-stone-400 mt-0.5">Arriving soon — the code will be emailed on the delivery date.</p>
+            </div>
+            <div className="divide-y divide-stone-100">
+              {scheduledGiftCards.map((gc) => (
+                <div key={gc.id} className="px-6 py-4 flex items-center justify-between">
+                  <p className="text-sm text-stone-700">
+                    ${gc.initialBalance.toFixed(2)} gift card
+                  </p>
+                  <p className="text-xs text-stone-400">
+                    Arriving {gc.deliverOn?.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
+                  </p>
+                </div>
+              ))}
+            </div>
           </div>
         )}
 

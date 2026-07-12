@@ -1,10 +1,12 @@
 import Link from 'next/link';
 import { prisma } from '@/lib/db';
-import { PackageIcon, NotePencilIcon, ReceiptIcon, TrayIcon, UsersIcon, GiftIcon } from '@phosphor-icons/react/dist/ssr';
+import { PackageIcon, NotePencilIcon, ReceiptIcon, TrayIcon, UsersIcon, GiftIcon, WarningCircleIcon, CreditCardIcon } from '@phosphor-icons/react/dist/ssr';
 import { CountUpStat } from '@/components/ui/CountUpStat';
+import { StripeBalanceCard } from '@/components/admin/StripeBalanceCard';
+import { WebhookHealthCard } from '@/components/admin/WebhookHealthCard';
 
 export default async function AdminDashboard() {
-  const [totalOrders, revenueResult, recentOrders, totalUsers, totalProducts, unreadSubmissions, giftCardBalanceResult] = await Promise.all([
+  const [totalOrders, revenueResult, recentOrders, totalUsers, totalProducts, unreadSubmissions, giftCardBalanceResult, disputedOrders] = await Promise.all([
     prisma.order.count(),
     prisma.order.aggregate({ _sum: { amount: true }, where: { status: 'paid' } }),
     prisma.order.findMany({ orderBy: { createdAt: 'desc' }, take: 5, include: { items: true } }),
@@ -12,6 +14,11 @@ export default async function AdminDashboard() {
     prisma.product.count({ where: { inStock: true } }),
     prisma.submission.count({ where: { read: false } }),
     prisma.giftCard.aggregate({ _sum: { balance: true }, where: { balance: { gt: 0 } } }),
+    prisma.order.findMany({
+      where: { status: 'disputed' },
+      orderBy: { disputeDueBy: 'asc' },
+      select: { id: true, amount: true, customerEmail: true, disputeReason: true, disputeDueBy: true },
+    }),
   ]);
 
   const totalRevenue = revenueResult._sum.amount ?? 0;
@@ -20,7 +27,9 @@ export default async function AdminDashboard() {
   const statusColors: Record<string, string> = {
     paid: 'bg-green-100 text-green-700',
     pending: 'bg-yellow-100 text-yellow-700',
+    partially_refunded: 'bg-blue-100 text-blue-700',
     refunded: 'bg-stone-100 text-stone-600',
+    disputed: 'bg-orange-100 text-orange-700',
     failed: 'bg-red-100 text-red-600',
   };
 
@@ -28,6 +37,7 @@ export default async function AdminDashboard() {
     { label: 'Manage Products', desc: 'Add, edit, or remove coffees, subscriptions & merch', href: '/admin/products', icon: PackageIcon },
     { label: 'Edit Content', desc: 'Update homepage, about page & contact details', href: '/admin/content', icon: NotePencilIcon },
     { label: 'View Orders', desc: 'Full order history with customer details', href: '/admin/orders', icon: ReceiptIcon },
+    { label: 'Payments', desc: 'Look up any payment, failed attempts & webhook activity', href: '/admin/payments', icon: CreditCardIcon },
     { label: 'Gift Cards', desc: 'Issue, credit, resend & audit e-gift cards', href: '/admin/gift-cards', icon: GiftIcon },
     { label: 'Submissions', desc: 'Contact, wholesale & coffee cart inquiries', href: '/admin/submissions', icon: TrayIcon },
     { label: 'Manage Users', desc: 'Customer list and admin role management', href: '/admin/users', icon: UsersIcon },
@@ -56,6 +66,33 @@ export default async function AdminDashboard() {
             <CountUpStat value={stat.value} prefix={stat.prefix} decimals={stat.decimals} />
           </div>
         ))}
+      </div>
+
+      {/* Disputes needing attention */}
+      {disputedOrders.length > 0 && (
+        <div className="bg-orange-50 border border-orange-200 rounded-xl p-4 text-sm text-orange-800 space-y-2">
+          <p className="flex items-start gap-1.5 font-medium">
+            <WarningCircleIcon size={16} weight="duotone" className="flex-shrink-0 mt-0.5" />
+            <span>{disputedOrders.length} order{disputedOrders.length === 1 ? '' : 's'} disputed (chargeback) and need{disputedOrders.length === 1 ? 's' : ''} a response:</span>
+          </p>
+          <ul className="space-y-1 pl-6">
+            {disputedOrders.map((o) => (
+              <li key={o.id} className="text-xs flex items-center justify-between gap-3">
+                <span>
+                  ${o.amount.toFixed(2)} · {o.customerEmail ?? 'no email'} · {o.disputeReason ?? 'unknown reason'}
+                  {o.disputeDueBy && <> · evidence due {new Date(o.disputeDueBy).toDateString()}</>}
+                </span>
+                <Link href={`/admin/orders/${o.id}`} className="text-amber-700 hover:underline flex-shrink-0">Details →</Link>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {/* Stripe balance + webhook health */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <StripeBalanceCard />
+        <WebhookHealthCard />
       </div>
 
       {/* Quick links */}

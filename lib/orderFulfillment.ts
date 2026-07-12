@@ -1,4 +1,5 @@
 import { Prisma } from '@prisma/client';
+import type Stripe from 'stripe';
 import { prisma } from '@/lib/db';
 import {
   sendGiftCardEmail,
@@ -8,7 +9,7 @@ import {
   sendGiftCardBalanceRestoredEmail,
   sendGiftCardVoidedEmail,
 } from '@/lib/email';
-import { generateUniqueGiftCardCode } from '@/lib/giftCard';
+import { generateUniqueGiftCardCode, reserveGiftCards } from '@/lib/giftCard';
 
 export interface CompactOrderItem {
   id: string;
@@ -43,6 +44,73 @@ export interface FulfillOrderInput {
   items: CompactOrderItem[];
   giftPurchases: GiftPurchaseEntry[];
   giftRedemptions: GiftRedemptionEntry[];
+  /**
+   * True when giftRedemptions amounts were already atomically reserved
+   * before this call (via reserveGiftCards + a GiftCardHold row per code,
+   * tied to this stripePaymentId) — skip the balance check/decrement here
+   * and just record the redemption rows, then mark those holds consumed.
+   * Used by the Stripe-charged checkout path (reserved at PaymentIntent
+   * creation, settled here by the webhook or the recovery cron) so the
+   * charge amount the customer saw is never stale by the time this runs.
+   * The zero-charge path leaves this false and self-reserves here, since
+   * there's no time gap between computing the discount and creating the
+   * order — see app/api/create-payment-intent/route.ts.
+   */
+  holdsAlreadyReserved?: boolean;
+}
+
+/**
+ * Builds a fulfillOrder input from a succeeded PaymentIntent's metadata —
+ * shared by the webhook's normal payment_intent.succeeded handler and the
+ * release-stale-gift-card-holds cron's recovery path (a succeeded payment
+ * whose webhook never fired, e.g. the endpoint was unreachable or, locally,
+ * `stripe listen` wasn't running). Always sets holdsAlreadyReserved: true —
+ * any gift card redemptions here were reserved at PaymentIntent-creation
+ * time, so this only ever settles existing holds, never re-decrements.
+ */
+export function buildFulfillOrderInputFromPaymentIntent(pi: Stripe.PaymentIntent): FulfillOrderInput {
+  const { customerEmail, customerName, shippingAddress, items, giftDetails, redeemGiftCards } = pi.metadata;
+
+  let parsedAddress: object | null = null;
+  try {
+    parsedAddress = shippingAddress ? JSON.parse(shippingAddress) : null;
+  } catch {
+    console.warn('Could not parse shippingAddress metadata');
+  }
+
+  let parsedItems: CompactOrderItem[] = [];
+  try {
+    parsedItems = items ? JSON.parse(items) : [];
+  } catch {
+    console.warn('Could not parse items metadata');
+  }
+
+  let giftPurchases: GiftPurchaseEntry[] = [];
+  try {
+    giftPurchases = giftDetails ? JSON.parse(giftDetails) : [];
+  } catch {
+    console.warn('Could not parse giftDetails metadata');
+  }
+
+  let giftRedemptions: GiftRedemptionEntry[] = [];
+  try {
+    giftRedemptions = redeemGiftCards ? JSON.parse(redeemGiftCards) : [];
+  } catch {
+    console.warn('Could not parse redeemGiftCards metadata');
+  }
+
+  return {
+    stripePaymentId: pi.id,
+    amount: pi.amount / 100,
+    currency: pi.currency,
+    customerEmail: customerEmail || null,
+    customerName: customerName || null,
+    shippingAddress: parsedAddress,
+    items: parsedItems,
+    giftPurchases,
+    giftRedemptions,
+    holdsAlreadyReserved: true,
+  };
 }
 
 /**
@@ -67,28 +135,33 @@ export async function fulfillOrder(input: FulfillOrderInput) {
     if (user) userId = user.id;
   }
 
-  // Redeem each applied gift card. Guarded with a conditional update
-  // (balance >= amount) so two orders redeeming the same code at once can't
-  // push a balance negative. Payment has already succeeded by this point, so
-  // a failure here is logged for manual reconciliation rather than failing
-  // the whole order.
-  const redemptions: { giftCardId: string; amount: number; code: string }[] = [];
-  for (const { code, amount } of input.giftRedemptions) {
-    if (amount <= 0) continue;
-    const giftCard = await prisma.giftCard.findUnique({ where: { code } });
-    if (!giftCard || giftCard.balance < amount) {
-      console.error(`Gift card ${code} has insufficient balance for $${amount} redemption on order ${stripePaymentId}`);
-      continue;
-    }
-    const result = await prisma.giftCard.updateMany({
-      where: { id: giftCard.id, balance: { gte: amount } },
-      data: { balance: { decrement: amount } },
+  // Redeem each applied gift card.
+  let redemptions: { giftCardId: string; amount: number; code: string }[] = [];
+  if (input.holdsAlreadyReserved) {
+    // Trust the DB's own pending holds for this paymentIntentId as the sole
+    // source of truth for what to redeem — NOT input.giftRedemptions, which
+    // is only PaymentIntent metadata and could in principle be stale or
+    // manipulated. If a hold isn't there (already consumed by a retried
+    // webhook, or genuinely never existed), nothing is redeemed for it —
+    // this can never double-spend or fabricate a redemption with no
+    // matching reservation.
+    const holds = await prisma.giftCardHold.findMany({
+      where: { paymentIntentId: stripePaymentId, status: 'pending' },
     });
-    if (result.count === 1) {
-      redemptions.push({ giftCardId: giftCard.id, amount, code });
-    } else {
-      console.error(`Gift card ${code} balance changed concurrently — could not apply $${amount} redemption on order ${stripePaymentId}`);
+    redemptions = holds.map((h) => ({ giftCardId: h.giftCardId, amount: h.amount, code: h.code }));
+    if (holds.length > 0) {
+      await prisma.giftCardHold.updateMany({
+        where: { id: { in: holds.map((h) => h.id) } },
+        data: { status: 'consumed', resolvedAt: new Date() },
+      });
     }
+  } else {
+    // No prior reservation (zero-charge checkout path) — reserve now.
+    // Guarded so two orders redeeming the same code at once can't push a
+    // balance negative; a failure here is logged for manual reconciliation
+    // rather than failing the whole order, since payment (if any) already
+    // succeeded by this point.
+    redemptions = await reserveGiftCards(input.giftRedemptions, `order ${stripePaymentId}`);
   }
 
   const giftByIdx = new Map(input.giftPurchases.map((g) => [g.idx, g]));

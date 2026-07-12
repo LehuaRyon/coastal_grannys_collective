@@ -61,6 +61,8 @@ export default function AdminGiftCardsPage() {
   const [creditForms, setCreditForms] = useState<Record<string, { amount: string; reason: string }>>({});
   const [creditingId, setCreditingId] = useState<string | null>(null);
   const [resendingId, setResendingId] = useState<string | null>(null);
+  const [voidReasons, setVoidReasons] = useState<Record<string, string>>({});
+  const [voidingId, setVoidingId] = useState<string | null>(null);
 
   function creditForm(id: string) {
     return creditForms[id] ?? { amount: '', reason: '' };
@@ -137,6 +139,31 @@ export default function AdminGiftCardsPage() {
       showToast(err instanceof Error ? err.message : 'Failed to add credit');
     } finally {
       setCreditingId(null);
+    }
+  }
+
+  async function voidCard(id: string, code: string, balance: number) {
+    const reason = (voidReasons[id] ?? '').trim();
+    if (!reason) return showToast('A reason is required');
+    if (!window.confirm(`Void ${code}? This permanently zeroes out its $${balance.toFixed(2)} balance and can't be undone.`)) {
+      return;
+    }
+    setVoidingId(id);
+    try {
+      const res = await fetch(`/api/admin/gift-cards/${id}/void`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ reason }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+      showToast(`${code} voided`);
+      setVoidReasons((prev) => ({ ...prev, [id]: '' }));
+      load(query);
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : 'Failed to void gift card');
+    } finally {
+      setVoidingId(null);
     }
   }
 
@@ -374,6 +401,25 @@ export default function AdminGiftCardsPage() {
                         Add Credit
                       </button>
                     </div>
+
+                    {gc.balance > 0 && (
+                      <div className="flex gap-2 items-start pt-2 border-t border-stone-100">
+                        <input
+                          type="text"
+                          value={voidReasons[gc.id] ?? ''}
+                          onChange={(e) => setVoidReasons((prev) => ({ ...prev, [gc.id]: e.target.value }))}
+                          placeholder="Void reason (required)"
+                          className="flex-1 border border-stone-200 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:border-red-300"
+                        />
+                        <button
+                          onClick={() => voidCard(gc.id, gc.code, gc.balance)}
+                          disabled={voidingId === gc.id}
+                          className="text-xs font-medium bg-red-50 text-red-700 border border-red-200 px-3 py-1.5 rounded-lg hover:bg-red-100 transition-colors disabled:opacity-50"
+                        >
+                          {voidingId === gc.id ? 'Voiding…' : 'Void Card'}
+                        </button>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>

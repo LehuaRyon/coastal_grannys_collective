@@ -3,6 +3,10 @@
     {
       "path": "/api/cron/deliver-scheduled-gift-cards",
       "schedule": "0 14 * * *"
+    },
+    {
+      "path": "/api/cron/release-stale-gift-card-holds",
+      "schedule": "15 14 * * *"
     }
   ]
 }

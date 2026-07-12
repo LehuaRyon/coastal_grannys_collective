@@ -1,11 +1,3 @@
-// TODO: After sorting/filtering is in place, add a CSV export button:
-//   • Button label: "Export CSV" — appears above the table, exports only the currently filtered rows
-//   • Columns: Order ID, Customer Name, Email, Items (joined string), Amount, Status, Date
-//   • Implement as a client-side download (build a Blob from the filtered data and trigger
-//     a link click with a `data:text/csv` URL) so no extra API route is needed
-//   • Alternatively, a /api/admin/orders/export?days=30&status=paid route that streams
-//     a CSV response with Content-Disposition: attachment is cleaner for large datasets
-
 // TODO: Add sorting and filtering to this page:
 //   • Sort by customer name (A→Z / Z→A) in addition to the current date sort
 //   • Date range filter buttons: Past 30 days / Past 60 days / Past 90 days / All time
@@ -14,8 +6,12 @@
 //   Convert to a Client Component (or use server-side search params) so the filters
 //   update without a full page reload.
 
+import Link from 'next/link';
 import { prisma } from '@/lib/db';
 import { OrderStatusSelect } from '@/components/admin/OrderStatusSelect';
+import { OrphanedPaymentsBanner } from '@/components/admin/OrphanedPaymentsBanner';
+import { ExportOrdersButton } from '@/components/admin/ExportOrdersButton';
+import { ManualOrderForm } from '@/components/admin/ManualOrderForm';
 
 export default async function AdminOrdersPage() {
   const orders = await prisma.order.findMany({
@@ -32,8 +28,25 @@ export default async function AdminOrdersPage() {
           <h1 className="font-serif text-2xl text-stone-900">Orders</h1>
           <p className="text-sm text-stone-500 mt-1">{orders.length} orders · ${total.toFixed(2)} revenue from paid orders</p>
         </div>
-        <p className="text-xs text-stone-400">To process a refund, update status here then go to Stripe Dashboard.</p>
+        <div className="flex items-center gap-3">
+          <p className="text-xs text-stone-400">Click an order for full details, refunds, and dispute info.</p>
+          <ExportOrdersButton
+            orders={orders.map((o) => ({
+              id: o.id,
+              customerName: o.customerName,
+              customerEmail: o.customerEmail,
+              amount: o.amount,
+              status: o.status,
+              createdAt: o.createdAt.toISOString(),
+              items: o.items.map((i) => ({ name: i.name, qty: i.qty })),
+            }))}
+          />
+        </div>
       </div>
+
+      <ManualOrderForm />
+
+      <OrphanedPaymentsBanner />
 
       <div className="bg-white rounded-xl border border-stone-100 overflow-hidden">
         {orders.length === 0 ? (
@@ -43,7 +56,7 @@ export default async function AdminOrdersPage() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-stone-100 bg-stone-50">
-                  {['Customer', 'Items', 'Shipping', 'Amount', 'Status', 'Date'].map((h) => (
+                  {['Customer', 'Items', 'Shipping', 'Amount', 'Status', 'Date', ''].map((h) => (
                     <th key={h} className="text-left px-6 py-3 text-xs font-semibold text-stone-500 uppercase tracking-wide">{h}</th>
                   ))}
                 </tr>
@@ -54,7 +67,12 @@ export default async function AdminOrdersPage() {
                   return (
                     <tr key={order.id} className="hover:bg-stone-50 transition-colors">
                       <td className="px-6 py-4">
-                        <p className="font-medium text-stone-900">{order.customerName}</p>
+                        <p className="font-medium text-stone-900">
+                          {order.customerName}
+                          {order.manualEntryBy && (
+                            <span className="ml-1.5 inline-flex px-1.5 py-0.5 rounded text-[10px] font-medium bg-purple-100 text-purple-700 align-middle">Manual</span>
+                          )}
+                        </p>
                         <p className="text-xs text-stone-400">{order.customerEmail}</p>
                       </td>
                       <td className="px-6 py-4 text-stone-600">
@@ -82,9 +100,17 @@ export default async function AdminOrdersPage() {
                       </td>
                       <td className="px-6 py-4">
                         <OrderStatusSelect orderId={order.id} initialStatus={order.status} />
+                        {order.status === 'disputed' && (
+                          <span className="block text-[10px] text-orange-600 mt-1">chargeback in progress</span>
+                        )}
                       </td>
                       <td className="px-6 py-4 text-xs text-stone-500">
                         {new Date(order.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                      </td>
+                      <td className="px-6 py-4">
+                        <Link href={`/admin/orders/${order.id}`} className="text-xs text-amber-700 hover:underline whitespace-nowrap">
+                          Details →
+                        </Link>
                       </td>
                     </tr>
                   );

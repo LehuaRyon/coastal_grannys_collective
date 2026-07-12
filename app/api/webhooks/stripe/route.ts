@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import Stripe from 'stripe';
 import { prisma } from '@/lib/db';
-import { fulfillOrder, updateOrderStatus, CompactOrderItem, GiftPurchaseEntry, GiftRedemptionEntry } from '@/lib/orderFulfillment';
+import { fulfillOrder, updateOrderStatus, buildFulfillOrderInputFromPaymentIntent } from '@/lib/orderFulfillment';
+import { releaseGiftCardReservation } from '@/lib/giftCard';
+import { sendEmail } from '@/lib/email';
 
 function getStripeClient(): Stripe {
   const key = process.env.STRIPE_SECRET_KEY;
@@ -34,6 +36,15 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: `Webhook error: ${message}` }, { status: 400 });
   }
 
+  // Logged as soon as the signature checks out — before any processing —
+  // so the admin dashboard's "Stripe last talked to us at X" reflects
+  // Stripe reaching this endpoint at all, independent of whether handling
+  // that specific event later succeeds or fails. upsert (not create) since
+  // Stripe redelivers the same event id on retry.
+  await prisma.stripeWebhookEvent
+    .upsert({ where: { stripeEventId: event.id }, create: { stripeEventId: event.id, type: event.type }, update: {} })
+    .catch((err) => console.error('Failed to log webhook event receipt:', err));
+
   // Handle events
   try {
     switch (event.type) {
@@ -46,6 +57,30 @@ export async function POST(request: NextRequest) {
       case 'payment_intent.payment_failed': {
         const pi = event.data.object as Stripe.PaymentIntent;
         console.warn(`Payment failed for PaymentIntent ${pi.id}:`, pi.last_payment_error?.message);
+        // Deliberately not releasing gift card holds here — Stripe commonly
+        // reuses the same PaymentIntent for a retry after a declined card,
+        // so a single failed attempt doesn't mean the checkout is dead. Only
+        // payment_intent.canceled (explicitly terminal) or the
+        // release-stale-gift-card-holds cron (abandoned long enough to be
+        // safe) release the reservation — see GiftCardHold's doc comment.
+        break;
+      }
+
+      case 'payment_intent.canceled': {
+        const pi = event.data.object as Stripe.PaymentIntent;
+        await releaseHoldsForPaymentIntent(pi.id, 'payment intent canceled');
+        break;
+      }
+
+      case 'charge.dispute.created': {
+        const dispute = event.data.object as Stripe.Dispute;
+        await handleDisputeCreated(dispute);
+        break;
+      }
+
+      case 'charge.dispute.closed': {
+        const dispute = event.data.object as Stripe.Dispute;
+        await handleDisputeClosed(dispute);
         break;
       }
 
@@ -88,45 +123,105 @@ export async function POST(request: NextRequest) {
 }
 
 async function handlePaymentSucceeded(pi: Stripe.PaymentIntent) {
-  const { customerEmail, customerName, shippingAddress, items, giftDetails, redeemGiftCards } = pi.metadata;
+  await fulfillOrder(buildFulfillOrderInputFromPaymentIntent(pi));
+}
 
-  let parsedAddress: object | null = null;
-  try {
-    parsedAddress = shippingAddress ? JSON.parse(shippingAddress) : null;
-  } catch {
-    console.warn('Could not parse shippingAddress metadata');
-  }
-
-  let parsedItems: CompactOrderItem[] = [];
-  try {
-    parsedItems = items ? JSON.parse(items) : [];
-  } catch {
-    console.warn('Could not parse items metadata');
-  }
-
-  let giftPurchases: GiftPurchaseEntry[] = [];
-  try {
-    giftPurchases = giftDetails ? JSON.parse(giftDetails) : [];
-  } catch {
-    console.warn('Could not parse giftDetails metadata');
-  }
-
-  let giftRedemptions: GiftRedemptionEntry[] = [];
-  try {
-    giftRedemptions = redeemGiftCards ? JSON.parse(redeemGiftCards) : [];
-  } catch {
-    console.warn('Could not parse redeemGiftCards metadata');
-  }
-
-  await fulfillOrder({
-    stripePaymentId: pi.id,
-    amount: pi.amount / 100, // convert cents → dollars
-    currency: pi.currency,
-    customerEmail: customerEmail || null,
-    customerName: customerName || null,
-    shippingAddress: parsedAddress,
-    items: parsedItems,
-    giftPurchases,
-    giftRedemptions,
+// Restores any still-pending GiftCardHold rows for a PaymentIntent that
+// didn't end in success — a declined card, or Stripe canceling an intent —
+// so the customer's gift card balance isn't stuck reserved for money that
+// was never actually taken.
+async function releaseHoldsForPaymentIntent(paymentIntentId: string, reason: string) {
+  const holds = await prisma.giftCardHold.findMany({
+    where: { paymentIntentId, status: 'pending' },
   });
+  for (const hold of holds) {
+    await releaseGiftCardReservation(hold.giftCardId, hold.amount);
+    await prisma.giftCardHold.update({
+      where: { id: hold.id },
+      data: { status: 'released', resolvedAt: new Date() },
+    });
+  }
+  if (holds.length > 0) {
+    console.log(`Released ${holds.length} gift card hold(s) for PaymentIntent ${paymentIntentId} (${reason})`);
+  }
+}
+
+// A dispute means the cardholder's bank pulled the money back directly,
+// bypassing our normal refund flow entirely — without this, a chargeback
+// would never restore redeemed gift card balances or void purchased ones.
+async function handleDisputeCreated(dispute: Stripe.Dispute) {
+  const paymentIntentId =
+    typeof dispute.payment_intent === 'string' ? dispute.payment_intent : dispute.payment_intent?.id;
+  if (!paymentIntentId) return;
+
+  const order = await prisma.order.findUnique({ where: { stripePaymentId: paymentIntentId } });
+  if (!order) {
+    console.warn(`Dispute ${dispute.id} created for unknown PaymentIntent ${paymentIntentId}`);
+    return;
+  }
+
+  const dueBy = dispute.evidence_details?.due_by ? new Date(dispute.evidence_details.due_by * 1000) : null;
+
+  await prisma.order.update({
+    where: { id: order.id },
+    data: {
+      status: 'disputed',
+      disputeId: dispute.id,
+      disputeReason: dispute.reason,
+      disputeStatus: dispute.status,
+      disputeDueBy: dueBy,
+    },
+  });
+
+  console.log(`Order ${order.id} disputed ($${(dispute.amount / 100).toFixed(2)}, reason: ${dispute.reason})`);
+
+  if (process.env.NOTIFY_EMAIL) {
+    try {
+      await sendEmail({
+        to: process.env.NOTIFY_EMAIL,
+        subject: `Chargeback opened — $${(dispute.amount / 100).toFixed(2)} (order ${order.id})`,
+        text: [
+          `A customer disputed a charge through their bank rather than requesting a refund.`,
+          '',
+          `Order: ${order.id}`,
+          `Customer: ${order.customerName ?? 'Guest'} <${order.customerEmail ?? 'no email'}>`,
+          `Amount disputed: $${(dispute.amount / 100).toFixed(2)}`,
+          `Reason given by the bank: ${dispute.reason}`,
+          dueBy ? `Evidence due by: ${dueBy.toDateString()}` : null,
+          '',
+          `Review it at /admin/orders — if you don't respond with evidence before the due date, the dispute is automatically lost and the charge stays reversed.`,
+        ].filter((l): l is string => l !== null).join('\n'),
+      });
+    } catch (err) {
+      console.error(`Failed to send dispute alert for order ${order.id}:`, err);
+    }
+  }
+}
+
+// Stripe resolves a dispute days/weeks later — "lost" means the chargeback
+// stands (money is gone for good, same as a full refund) so it gets the
+// same gift card reconciliation; "won" means we keep the funds and the
+// order just goes back to normal.
+async function handleDisputeClosed(dispute: Stripe.Dispute) {
+  const paymentIntentId =
+    typeof dispute.payment_intent === 'string' ? dispute.payment_intent : dispute.payment_intent?.id;
+  if (!paymentIntentId) return;
+
+  const order = await prisma.order.findUnique({ where: { stripePaymentId: paymentIntentId } });
+  if (!order) return;
+
+  if (dispute.status === 'lost') {
+    await updateOrderStatus(order.id, 'refunded', dispute.amount / 100);
+    await prisma.order.update({ where: { id: order.id }, data: { disputeStatus: 'lost' } });
+    console.log(`Dispute ${dispute.id} lost — order ${order.id} reconciled like a refund`);
+  } else if (dispute.status === 'won') {
+    await prisma.order.update({
+      where: { id: order.id },
+      data: { status: 'paid', disputeStatus: 'won' },
+    });
+    console.log(`Dispute ${dispute.id} won — order ${order.id} restored to paid`);
+  } else {
+    // warning_closed / other non-terminal outcomes — just record the status
+    await prisma.order.update({ where: { id: order.id }, data: { disputeStatus: dispute.status } });
+  }
 }

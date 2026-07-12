@@ -36,7 +36,7 @@ export function OrderStatusSelect({ orderId, initialStatus }: { orderId: string;
       setStatus(newStatus);
       showToast(`Order marked as ${newStatus}`);
       if (newStatus === 'refunded') {
-        showToast('Note: process the actual refund in your Stripe Dashboard');
+        showToast('This only updates our records — it does not refund the customer. Use the Refund button on the order detail page to actually send money back.');
       }
     } catch {
       showToast('Failed to update status');

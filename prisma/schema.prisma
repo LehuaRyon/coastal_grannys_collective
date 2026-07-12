@@ -97,6 +97,25 @@ model Order {
   createdAt       DateTime    @default(now())
   updatedAt       DateTime    @updatedAt
 
+  // Set by the charge.dispute.created/closed webhook handlers — lets the
+  // admin orders page show chargeback details without ever needing the
+  // Stripe Dashboard. disputeStatus mirrors Stripe's dispute.status
+  // (needs_response | under_review | won | lost, etc.); a "lost" dispute
+  // triggers the same gift card reconciliation as a full refund.
+  disputeId       String?
+  disputeReason   String?
+  disputeStatus   String?
+  disputeDueBy    DateTime?
+
+  // Set when an admin records an order manually (comp, phone/in-person
+  // sale, goodwill adjustment) rather than it coming through checkout —
+  // stripePaymentId is a synthetic `manual_<cuid>` for these, same pattern
+  // as the gift-card-only zero-charge path. Kept separate from the refund/
+  // dispute audit trail since it answers a different question ("why does
+  // this order exist at all") rather than "what happened to a real charge."
+  manualEntryBy   String?
+  manualEntryNote String?
+
   // Gift card redemption — this order applied one or more gift cards toward its total
   giftCardRedemptions GiftCardRedemption[]
 
@@ -139,8 +158,49 @@ model GiftCard {
   deliverOn DateTime?
   delivered Boolean   @default(false)
 
+  holds GiftCardHold[]
+
   @@index([recipientEmail])
   @@index([delivered, deliverOn])
+}
+
+// A temporary reservation against a gift card's balance, created the moment
+// checkout applies it — whether that order ends up fully covered (paymentIntentId
+// is a synthetic `giftcard_<uuid>`, settled in the same request) or partly
+// charged via a real Stripe PaymentIntent (settled later by the webhook).
+// Always created before the balance is trusted for anything downstream, so
+// the amount shown to the customer always matches a real reservation — see
+// reserveGiftCards. fulfillOrder's holdsAlreadyReserved mode reads pending
+// holds by paymentIntentId as the sole source of truth for what to redeem,
+// rather than trusting (possibly stale) PaymentIntent metadata:
+//   - pending:  reserved, order not yet finalized
+//   - consumed: order created — converted into a real GiftCardRedemption
+//   - released: payment intent was canceled or the checkout was abandoned
+//               long enough for the release-stale-gift-card-holds cron to
+//               reclaim it — amount restored to balance
+// Deliberately NOT released on a single failed payment attempt
+// (payment_intent.payment_failed) — Stripe commonly reuses the same
+// PaymentIntent for a retry after a declined card, so releasing on the
+// first failure would let a later successful retry settle against a hold
+// that's already gone. Only a genuinely terminal state (canceled, or long
+// enough that the cron calls it abandoned) releases the reservation.
+model GiftCardHold {
+  id              String    @id @default(cuid())
+  giftCardId      String
+  giftCard        GiftCard  @relation(fields: [giftCardId], references: [id], onDelete: Cascade)
+  // Denormalized so settlement never has to trust PaymentIntent metadata —
+  // fulfillOrder's holdsAlreadyReserved mode reads pending holds straight
+  // from this table as the source of truth for what to redeem.
+  code            String
+  paymentIntentId String
+  amount          Float
+  status          String    @default("pending") // pending | consumed | released
+  createdAt       DateTime  @default(now())
+  resolvedAt      DateTime?
+
+  @@index([giftCardId])
+  @@index([paymentIntentId])
+  @@index([status, createdAt])
 }
 
 // Join row — one order can redeem multiple gift cards, and one gift card can
@@ -171,13 +231,27 @@ model CronRun {
   @@index([job, ranAt])
 }
 
+// Logged the instant a Stripe webhook event passes signature verification —
+// exists purely so the admin dashboard can show "Stripe last talked to us
+// at X" without ever needing Stripe Dashboard's own webhook event log. Born
+// directly from this project hitting a silently-dead webhook twice during
+// development (see the orphaned-payment recovery tool this pairs with).
+model StripeWebhookEvent {
+  id            String   @id @default(cuid())
+  stripeEventId String   @unique
+  type          String
+  receivedAt    DateTime @default(now())
+
+  @@index([receivedAt])
+}
+
 // Durable, queryable record of admin actions on gift cards — issue, credit,
 // resend — so "who issued this $500 card and why" is a query, not a log grep.
 model GiftCardAuditLog {
   id         String   @id @default(cuid())
   giftCardId String
   giftCard   GiftCard @relation(fields: [giftCardId], references: [id], onDelete: Cascade)
-  action     String   // issue | credit | resend
+  action     String   // issue | credit | resend | void
   amount     Float?
   reason     String?
   adminEmail String

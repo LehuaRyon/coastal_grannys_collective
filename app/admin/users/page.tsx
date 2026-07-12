@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import Link from 'next/link';
 import { showToast } from '@/components/ui/Toast';
 
 interface User {
@@ -60,7 +61,7 @@ export default function AdminUsersPage() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-stone-100 bg-stone-50">
-                  {['Name', 'Email', 'Role', 'Joined', 'Action'].map((h) => (
+                  {['Name', 'Email', 'Role', 'Joined', 'Action', ''].map((h) => (
                     <th key={h} className="text-left px-6 py-3 text-xs font-semibold text-stone-500 uppercase tracking-wide">{h}</th>
                   ))}
                 </tr>
@@ -88,6 +89,11 @@ export default function AdminUsersPage() {
                       >
                         {updating === user.id ? '…' : user.role === 'admin' ? 'Demote' : 'Make Admin'}
                       </button>
+                    </td>
+                    <td className="px-6 py-4">
+                      <Link href={`/admin/users/${user.id}`} className="text-xs text-amber-700 hover:underline whitespace-nowrap">
+                        Details →
+                      </Link>
                     </td>
                   </tr>
                 ))}

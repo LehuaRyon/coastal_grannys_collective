@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import Stripe from 'stripe';
 import { randomUUID } from 'crypto';
 import { prisma } from '@/lib/db';
-import { GIFT_CARD_ELIGIBLE_TYPES } from '@/lib/giftCard';
+import { GIFT_CARD_ELIGIBLE_TYPES, reserveGiftCards, releaseGiftCardReservation } from '@/lib/giftCard';
 import { fulfillOrder } from '@/lib/orderFulfillment';
 
 const MAX_GIFT_CARDS_PER_ORDER = 5;
@@ -78,7 +78,7 @@ export async function POST(request: NextRequest) {
       new Set((giftCardCodes ?? []).map((c) => c.trim().toUpperCase()).filter(Boolean))
     ).slice(0, MAX_GIFT_CARDS_PER_ORDER);
 
-    const redemptions: { code: string; amount: number }[] = [];
+    const plannedRedemptions: { code: string; amount: number }[] = [];
     let remainingProduct = eligibleSubtotal;
     let remainingShipping = shippingCost;
     for (const code of uniqueCodes) {
@@ -99,8 +99,19 @@ export async function POST(request: NextRequest) {
         remainingShipping -= use;
         balanceLeft -= use;
       }
-      if (used > 0) redemptions.push({ code, amount: used });
+      if (used > 0) plannedRedemptions.push({ code, amount: used });
     }
+
+    // Reserve for real now — atomically decrements each card's balance so
+    // the Stripe charge we're about to create is always backed by money
+    // that's actually been taken. If a card's balance changed since the
+    // planning loop above read it (e.g. spent in another tab a moment
+    // earlier), that code's reservation is dropped rather than overdrafting
+    // or charging the customer based on stale numbers. For the Stripe-
+    // charged branch below, this reservation is held via GiftCardHold rows
+    // until the webhook (or the release-stale-gift-card-holds cron) settles
+    // it — see fulfillOrder's holdsAlreadyReserved mode.
+    const redemptions = await reserveGiftCards(plannedRedemptions, 'checkout reservation');
 
     const totalDiscount = redemptions.reduce((sum, r) => sum + r.amount, 0);
     const remaining = Math.max(0, amount - totalDiscount);
@@ -117,67 +128,127 @@ export async function POST(request: NextRequest) {
         (x): x is { idx: number; email: string; msg: string; deliverOn: string | undefined } => x !== null
       );
 
-    // Fully covered by gift card balance — skip Stripe entirely rather than
-    // force an unchargeable sub-$0.50 card payment.
-    if (remaining < STRIPE_MIN_CHARGE) {
-      const order = await fulfillOrder({
-        stripePaymentId: `giftcard_${randomUUID()}`,
-        amount: 0,
-        currency,
-        customerEmail: customerEmail ?? null,
-        customerName: customerName ?? null,
-        shippingAddress: shippingAddress ?? null,
-        items: compactItems,
-        giftPurchases,
-        giftRedemptions: redemptions,
-      });
-      return NextResponse.json({ fullyCovered: true, orderId: order.id, amount: 0 });
-    }
-
-    const stripe = getStripeClient();
-
-    const itemsSummary = JSON.stringify(compactItems);
-
-    // Gift card recipient email + personal message travel in a separate metadata
-    // field (not the `items` blob above) so a long message can't truncate and
-    // corrupt the JSON for every line item in the order. Keyed by index into
-    // `items` (not product id) since two different gift cards of the same
-    // amount — e.g. two $25 cards to two different recipients — share an id.
-    let giftDetailsSummary = giftPurchases.length ? JSON.stringify(giftPurchases) : '';
-    if (giftDetailsSummary.length > 500) {
-      // Drop messages first, then hard-truncate as a last resort
-      giftDetailsSummary = JSON.stringify(giftPurchases.map(({ idx, email }) => ({ idx, email })));
-      if (giftDetailsSummary.length > 500) {
-        giftDetailsSummary = giftDetailsSummary.substring(0, 497) + '…';
+    // Everything from here on works with real, already-taken money (the
+    // reservation above). If ANYTHING fails past this point — a DB error
+    // creating hold rows, Stripe rejecting the PaymentIntent, whatever —
+    // that money must go back rather than being left stuck decremented with
+    // no order and no hold to show for it. One rollback path covers both
+    // branches below instead of each needing its own.
+    let attemptedPaymentId: string | null = null;
+    try {
+      // Fully covered by gift card balance — skip Stripe entirely rather
+      // than force an unchargeable sub-$0.50 card payment. Hold rows are
+      // still created (tied to this synthetic id) so fulfillOrder's
+      // holdsAlreadyReserved mode has the same single source of truth to
+      // settle against as the Stripe-charged path below.
+      if (remaining < STRIPE_MIN_CHARGE) {
+        const syntheticId = `giftcard_${randomUUID()}`;
+        attemptedPaymentId = syntheticId;
+        if (redemptions.length > 0) {
+          await prisma.giftCardHold.createMany({
+            data: redemptions.map((r) => ({
+              giftCardId: r.giftCardId,
+              code: r.code,
+              paymentIntentId: syntheticId,
+              amount: r.amount,
+            })),
+          });
+        }
+        const order = await fulfillOrder({
+          stripePaymentId: syntheticId,
+          amount: 0,
+          currency,
+          customerEmail: customerEmail ?? null,
+          customerName: customerName ?? null,
+          shippingAddress: shippingAddress ?? null,
+          items: compactItems,
+          giftPurchases,
+          giftRedemptions: redemptions,
+          holdsAlreadyReserved: true,
+        });
+        return NextResponse.json({ fullyCovered: true, orderId: order.id, amount: 0 });
       }
+
+      const stripe = getStripeClient();
+
+      const itemsSummary = JSON.stringify(compactItems);
+
+      // Gift card recipient email + personal message travel in a separate metadata
+      // field (not the `items` blob above) so a long message can't truncate and
+      // corrupt the JSON for every line item in the order. Keyed by index into
+      // `items` (not product id) since two different gift cards of the same
+      // amount — e.g. two $25 cards to two different recipients — share an id.
+      let giftDetailsSummary = giftPurchases.length ? JSON.stringify(giftPurchases) : '';
+      if (giftDetailsSummary.length > 500) {
+        // Drop messages first, then hard-truncate as a last resort
+        giftDetailsSummary = JSON.stringify(giftPurchases.map(({ idx, email }) => ({ idx, email })));
+        if (giftDetailsSummary.length > 500) {
+          giftDetailsSummary = giftDetailsSummary.substring(0, 497) + '…';
+        }
+      }
+
+      const redeemGiftCardsPayload = redemptions.map((r) => ({ code: r.code, amount: r.amount }));
+      let redeemGiftCardsSummary = redeemGiftCardsPayload.length ? JSON.stringify(redeemGiftCardsPayload) : '';
+      if (redeemGiftCardsSummary.length > 500) {
+        redeemGiftCardsSummary = redeemGiftCardsSummary.substring(0, 497) + '…';
+      }
+
+      const paymentIntent = await stripe.paymentIntents.create({
+        amount: Math.round(remaining * 100), // Stripe works in cents
+        currency,
+        receipt_email: customerEmail,
+        metadata: {
+          customerEmail: customerEmail ?? '',
+          customerName: customerName ?? '',
+          shippingAddress: shippingAddress ? JSON.stringify(shippingAddress) : '',
+          // Truncate if somehow over limit (safety net)
+          items: itemsSummary.length <= 500 ? itemsSummary : itemsSummary.substring(0, 497) + '…',
+          giftDetails: giftDetailsSummary,
+          redeemGiftCards: redeemGiftCardsSummary,
+        },
+        // Explicit list instead of automatic_payment_methods — restricts checkout to
+        // Card (Apple Pay / Google Pay show automatically inside it via the `wallets`
+        // option on PaymentElement) instead of surfacing every method enabled in the
+        // Stripe Dashboard (bank transfers, Cash App Pay, Affirm, Link, etc.).
+        payment_method_types: ['card'],
+      });
+      attemptedPaymentId = paymentIntent.id;
+
+      // Hold each reservation against this PaymentIntent until the webhook
+      // consumes it on success, or the release-stale-gift-card-holds cron
+      // reclaims it after a couple hours of no success — deliberately not
+      // released on a single declined attempt, since Stripe commonly reuses
+      // the same PaymentIntent for a retry (see GiftCardHold's doc comment).
+      if (redemptions.length > 0) {
+        await prisma.giftCardHold.createMany({
+          data: redemptions.map((r) => ({
+            giftCardId: r.giftCardId,
+            code: r.code,
+            paymentIntentId: paymentIntent.id,
+            amount: r.amount,
+          })),
+        });
+      }
+
+      return NextResponse.json({ clientSecret: paymentIntent.client_secret, amount: remaining });
+    } catch (err) {
+      for (const r of redemptions) {
+        await releaseGiftCardReservation(r.giftCardId, r.amount).catch((releaseErr) =>
+          console.error(`Failed to release gift card ${r.code} after checkout failure:`, releaseErr)
+        );
+      }
+      // Clean up any hold rows that made it into the DB before the failure
+      // (e.g. holds were created but fulfillOrder itself then threw) — the
+      // balance is already restored above, so these would otherwise sit
+      // around as phantom "pending" holds against an order that never
+      // existed and a paymentIntentId nothing will ever resolve.
+      if (attemptedPaymentId) {
+        await prisma.giftCardHold.deleteMany({ where: { paymentIntentId: attemptedPaymentId } }).catch((cleanupErr) =>
+          console.error(`Failed to clean up orphaned holds for ${attemptedPaymentId}:`, cleanupErr)
+        );
+      }
+      throw err;
     }
-
-    let redeemGiftCardsSummary = redemptions.length ? JSON.stringify(redemptions) : '';
-    if (redeemGiftCardsSummary.length > 500) {
-      redeemGiftCardsSummary = redeemGiftCardsSummary.substring(0, 497) + '…';
-    }
-
-    const paymentIntent = await stripe.paymentIntents.create({
-      amount: Math.round(remaining * 100), // Stripe works in cents
-      currency,
-      receipt_email: customerEmail,
-      metadata: {
-        customerEmail: customerEmail ?? '',
-        customerName: customerName ?? '',
-        shippingAddress: shippingAddress ? JSON.stringify(shippingAddress) : '',
-        // Truncate if somehow over limit (safety net)
-        items: itemsSummary.length <= 500 ? itemsSummary : itemsSummary.substring(0, 497) + '…',
-        giftDetails: giftDetailsSummary,
-        redeemGiftCards: redeemGiftCardsSummary,
-      },
-      // Explicit list instead of automatic_payment_methods — restricts checkout to
-      // Card (Apple Pay / Google Pay show automatically inside it via the `wallets`
-      // option on PaymentElement) instead of surfacing every method enabled in the
-      // Stripe Dashboard (bank transfers, Cash App Pay, Affirm, Link, etc.).
-      payment_method_types: ['card'],
-    });
-
-    return NextResponse.json({ clientSecret: paymentIntent.client_secret, amount: remaining });
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Internal server error';
     return NextResponse.json({ error: message }, { status: 500 });

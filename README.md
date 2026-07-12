@@ -228,13 +228,43 @@ To add more admins later, repeat step 2. To demote someone, run `npm run db:stud
 
 ## Admin Dashboard
 
-Visit `/admin` while logged in as admin:
+Visit `/admin` while logged in as admin. The whole point of this dashboard is that day-to-day store operation — including everything Stripe-related — never requires opening the Stripe Dashboard or the Neon database console. See "Stripe & Neon parity" below for exactly what that does and doesn't cover.
 
-- **Dashboard** — order stats (total orders, revenue, avg order, users, products), recent orders table
+- **Dashboard** (`/admin`) — order stats (total orders, revenue, avg order, gift card balance, users, products, unread messages); live **Stripe balance** (available/pending, last payout) and **webhook health** (last event received, event count in the last 24h — this is what would have caught the local `stripe listen` gaps hit during development, without ever opening Stripe's own webhook event log); a **disputes** banner when any chargeback needs a response
 - **Products** — full CRUD for coffees, subscriptions, and merch. Featured ⭐ toggle controls which coffees appear on the homepage (up to 4; falls back to first 4 in-stock by position)
 - **Content** — edit all text for Homepage, About, Contact, Wholesale, and Gift Cards pages. Changes go live immediately
-- **Orders** — full order list with customer details, items (including roast preference), shipping address, and inline status editor
-- **Users** — customer list with admin role toggle
+- **Orders** (`/admin/orders`) — full order list with customer details, items (including roast preference), shipping address, inline status editor, **CSV export**, and **Record Manual Order** for a comp, phone/in-person sale, or goodwill replacement that never touches Stripe (clearly badged "Manual" in the list, with a required note and the recording admin's email kept on the order). An **orphaned-payments banner** cross-references Stripe's recent successful payments (last 14 days) against local Order records and offers one-click recovery for any the webhook missed (also happens automatically via a daily cron — see `app/api/cron/release-stale-gift-card-holds`)
+  - **Order detail** (`/admin/orders/[id]`) — full item/shipping/payment breakdown, card brand + last 4, Stripe's fraud risk assessment (Radar), a link to the Stripe-hosted receipt, dispute banner with reason/due-by when applicable, and the **Refund** action (partial or full, with an optional reason sent to Stripe) — triggers a real `stripe.refunds.create()`; the `charge.refunded` webhook remains the sole source of truth for reconciling order status and gift card balances, exactly as if the refund had been issued from the Stripe Dashboard
+- **Payments** (`/admin/payments`) — look up *any* Stripe payment by PaymentIntent id or customer email regardless of age (the orphaned-payments banner only covers 14 days; this covers all of it, via Stripe's Search API), a **recent failed/declined attempts** feed for "I tried to pay and it didn't work" conversations (a failed attempt never creates an Order, so this is the only place it's visible at all), and the full **recent webhook events log** (not just the dashboard's "last event" summary)
+- **Gift Cards** (`/admin/gift-cards`) — issue, credit (additive-only, so a typo can't wipe a balance), **void** (one-way, requires a reason, for fraud/mistakes outside the normal refund-triggered void path), resend, full redemption + admin audit history, and a cron-health banner for scheduled deliveries
+- **Users** (`/admin/users`) — customer list with admin role toggle
+  - **Customer detail** (`/admin/users/[id]`) — every order, every gift card (purchased and received), and every support message tied to one customer in a single view, so a mid-conversation lookup during a customer issue never requires cross-referencing multiple pages or the database directly
+- **Submissions** — contact/wholesale/coffee-cart inquiries with reply threading
+
+### Stripe & Neon parity
+
+Built so an admin unfamiliar with Stripe or Postgres never needs to touch either directly:
+
+| Need | Where it lives in-app |
+| --- | --- |
+| Available/pending balance, last payout | Dashboard → Stripe Balance card |
+| "Is Stripe actually reaching us?" | Dashboard → Webhook Health card, or Payments → full event log |
+| Issue a refund (partial or full, with a reason) | Order detail → Refund |
+| See card brand/last4, Stripe receipt, fraud risk | Order detail |
+| Recover a payment the webhook missed (any age) | Orders → orphaned-payments banner (last 14 days, automatic) or Payments → look up by id/email (any age) |
+| See failed/declined payment attempts | Payments → Recent Failed/Declined Attempts |
+| Respond to / track a chargeback | Dashboard banner + order detail (see below for the one gap) |
+| Cancel/adjust a gift card | Gift Cards → Void / Credit |
+| Record a comp, phone sale, or manual adjustment | Orders → Record Manual Order |
+| Export transactions for accounting | Orders → Export CSV |
+| One customer's full history | Users → customer detail |
+
+**Deliberately still console-only** — these were evaluated and left out on purpose, not overlooked:
+- **Full dispute evidence submission.** The dashboard surfaces every dispute (reason, amount, due date) and reconciles the outcome automatically once Stripe resolves it, but *submitting evidence* to actually contest a chargeback requires Stripe's structured, file-upload-driven form. Replicating that in-app has poor ROI against the visibility already built — an admin gets a due-by warning here, then finishes the response in Stripe.
+- **Payout schedule / bank account changes.** Changing where or how often money lands requires Stripe's own KYC-verified flow — this is a compliance boundary, not a missing feature, and no app UI can legally substitute for it.
+- **Tax documents (1099-K) and identity verification.** Same compliance category — these must be accessed and completed directly in Stripe.
+- **Neon backups / point-in-time restore.** Infrastructure-level, "break glass" only. Wiring database restore into an app UI would be a bigger risk than any problem it solves — this should always require deliberately opening Neon's console.
+- **Raw SQL / a database console.** Would directly contradict the goal of admins not needing to understand these tools — it's the single most dangerous way to hand someone unfamiliar with SQL access to production data.
 
 ---
 
