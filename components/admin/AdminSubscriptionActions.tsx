@@ -7,7 +7,12 @@ import { showToast } from '@/components/ui/Toast';
 export function AdminSubscriptionActions({ id, status, cancelAtPeriodEnd = false }: { id: string; status: string; cancelAtPeriodEnd?: boolean }) {
   const router = useRouter();
   const [acting, setActing] = useState<'pause' | 'resume' | 'cancel' | 'resync' | 'retry-payment' | null>(null);
-  const hasPaymentIssue = status === 'past_due' || status === 'unpaid';
+  // 'incomplete' included too — same as the customer-side widening, this
+  // covers the case where the very first payment was never confirmed
+  // (declined card, abandoned checkout), so an admin can force a retry on
+  // a phone-support call ("customer says their card is fine now") instead
+  // of only being able to Cancel and tell the customer to start over.
+  const hasPaymentIssue = status === 'past_due' || status === 'unpaid' || status === 'incomplete';
 
   async function act(action: 'pause' | 'resume' | 'cancel' | 'resync' | 'retry-payment') {
     if (action === 'cancel' && !window.confirm('Cancel this subscription immediately? This cannot be undone.')) return;

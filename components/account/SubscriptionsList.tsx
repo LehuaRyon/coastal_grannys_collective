@@ -149,7 +149,16 @@ export function SubscriptionsList({ subscriptions }: { subscriptions: Subscripti
         const statusLabel = SUBSCRIPTION_STATUS_LABELS[sub.status] ?? sub.status;
         const statusColor = SUBSCRIPTION_STATUS_COLORS[sub.status] ?? 'bg-stone-100 text-stone-500';
         const canAct = sub.status === 'active' || sub.status === 'paused' || sub.status === 'past_due';
-        const canUpdatePayment = canAct || sub.status === 'unpaid';
+        const isIncomplete = sub.status === 'incomplete';
+        // 'incomplete' means the very first payment was never confirmed
+        // (declined card, closed tab, abandoned 3D Secure) — without this,
+        // a customer in this state has literally no self-service action
+        // available anywhere and is stuck for up to 24h until the
+        // abandoned-signup cron cleans it up. Reuses the exact same
+        // "update payment method" flow as a past_due retry — saving a new
+        // card there already auto-attempts the subscription's current open
+        // invoice, which for an incomplete subscription is its first one.
+        const canUpdatePayment = canAct || sub.status === 'unpaid' || isIncomplete;
         const hasPaymentIssue = sub.status === 'past_due' || sub.status === 'unpaid';
         const addr = sub.shippingAddress;
         return (
@@ -180,6 +189,11 @@ export function SubscriptionsList({ subscriptions }: { subscriptions: Subscripti
                 {hasPaymentIssue && (
                   <p className="text-xs text-red-600 mt-1">
                     We couldn&apos;t charge your card — update your payment method to keep this subscription active.
+                  </p>
+                )}
+                {isIncomplete && (
+                  <p className="text-xs text-amber-700 mt-1">
+                    This subscription was never confirmed — add a payment method below to complete it.
                   </p>
                 )}
               </div>
