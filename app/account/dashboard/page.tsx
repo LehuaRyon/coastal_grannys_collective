@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { SignOutButton } from '@/components/auth/SignOutButton';
 import { AddressCard } from '@/components/account/AddressCard';
 import { GiftCardList } from '@/components/account/GiftCardList';
+import { SubscriptionsList } from '@/components/account/SubscriptionsList';
 
 export const metadata = { title: "My Account — Coastal Granny's Collective" };
 
@@ -54,6 +55,20 @@ export default async function AccountDashboard() {
   });
 
   const allOrders = [...orders, ...emailOrders];
+
+  const subscriptions = await prisma.subscription.findMany({
+    where: { userId: user.id, status: { not: 'canceled' } },
+    orderBy: { createdAt: 'desc' },
+  });
+
+  // Current roast options per plan — looked up fresh rather than trusting
+  // whatever was offered at signup, since an admin can change a plan's
+  // roast lineup after a customer has already subscribed.
+  const subProducts = await prisma.product.findMany({
+    where: { id: { in: subscriptions.map((s) => s.productId) } },
+    select: { id: true, options: true },
+  });
+  const roastOptionsByProductId = new Map(subProducts.map((p) => [p.id, p.options]));
 
   // Live balance — reflects redemptions made either as a guest or logged in,
   // since gift cards are tracked by recipient email/code, not by session.
@@ -125,6 +140,28 @@ export default async function AccountDashboard() {
             </div>
           </div>
         </div>
+
+        {subscriptions.length > 0 && (
+          <div className="bg-white rounded-2xl border border-stone-100 shadow-sm overflow-hidden mb-8">
+            <div className="px-6 py-4 border-b border-stone-100">
+              <h2 className="font-medium text-stone-900">My Subscriptions</h2>
+            </div>
+            <SubscriptionsList
+              subscriptions={subscriptions.map((s) => ({
+                id: s.id,
+                productName: s.productName,
+                price: s.price,
+                freq: s.freq,
+                roastPreference: s.roastPreference,
+                roastOptions: roastOptionsByProductId.get(s.productId) ?? [],
+                status: s.status,
+                currentPeriodEnd: s.currentPeriodEnd?.toISOString() ?? null,
+                cancelAtPeriodEnd: s.cancelAtPeriodEnd,
+                shippingAddress: s.shippingAddress as unknown as { address: string; apt?: string; city: string; state: string; zip: string; country: string } | null,
+              }))}
+            />
+          </div>
+        )}
 
         {giftCards.length > 0 && (
           <div className="bg-white rounded-2xl border border-stone-100 shadow-sm overflow-hidden mb-8">

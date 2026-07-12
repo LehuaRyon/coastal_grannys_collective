@@ -35,6 +35,18 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     );
   }
 
+  // Subscription-cycle orders use a synthetic sub_invoice_<id> as
+  // Order.stripePaymentId (an idempotency key, not a real charge) — the
+  // actual refundable id lives in stripeChargeId instead. See
+  // resolveRealChargeId in lib/subscriptions.ts for why.
+  if (order.stripePaymentId.startsWith('sub_invoice_') && !order.stripeChargeId) {
+    return NextResponse.json(
+      { error: "Couldn't find the underlying charge for this subscription order — try Resync on the subscription first, then retry the refund." },
+      { status: 400 }
+    );
+  }
+  const refundTargetId = order.stripeChargeId ?? order.stripePaymentId;
+
   const alreadyRefunded = order.refundedAmount ?? 0;
   const maxRefundable = order.amount - alreadyRefunded;
   if (maxRefundable <= 0) {
@@ -59,7 +71,10 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   try {
     const stripe = getStripeClient();
     const refund = await stripe.refunds.create({
-      payment_intent: order.stripePaymentId,
+      // Almost always a PaymentIntent id (pi_...) for this app's checkout
+      // flows; the charge param is the fallback for the rare payment type
+      // that surfaces a Charge id instead (see resolveRealChargeId).
+      ...(refundTargetId.startsWith('ch_') ? { charge: refundTargetId } : { payment_intent: refundTargetId }),
       amount: Math.round(requested * 100),
       ...(reason ? { reason } : {}),
     });

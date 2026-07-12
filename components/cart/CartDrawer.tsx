@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { XIcon, CoffeeBeanIcon, ArrowsClockwiseIcon, TShirtIcon, ConfettiIcon } from '@phosphor-icons/react';
+import { XIcon, CoffeeBeanIcon, TShirtIcon, ConfettiIcon } from '@phosphor-icons/react';
 import { useCartStore, sortCartItems } from '@/lib/store/cart';
 import { CheckoutModal } from '@/components/checkout/CheckoutModal';
 import { Button } from '@/components/ui/Button';
@@ -38,8 +38,6 @@ function CartItemThumb({ item }: { item: CartItem }) {
           className="w-full h-full object-cover"
           onError={() => setImgError(true)}
         />
-      ) : item.type === 'sub' ? (
-        <ArrowsClockwiseIcon size={24} weight="duotone" color="white" />
       ) : item.type === 'merch' ? (
         <TShirtIcon size={24} weight="duotone" color="white" />
       ) : (

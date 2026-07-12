@@ -7,6 +7,10 @@
     {
       "path": "/api/cron/release-stale-gift-card-holds",
       "schedule": "15 14 * * *"
+    },
+    {
+      "path": "/api/cron/cleanup-abandoned-subscriptions",
+      "schedule": "30 14 * * *"
     }
   ]
 }

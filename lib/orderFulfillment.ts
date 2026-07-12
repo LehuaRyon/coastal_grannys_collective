@@ -11,6 +11,21 @@ import {
 } from '@/lib/email';
 import { generateUniqueGiftCardCode, reserveGiftCards } from '@/lib/giftCard';
 
+/**
+ * Finds an Order by a real Stripe PaymentIntent id — checking both
+ * stripePaymentId (the real PI id for one-time orders) and stripeChargeId
+ * (where it lives instead for subscription-cycle orders, whose
+ * stripePaymentId is a synthetic sub_invoice_<id> idempotency key, not a
+ * real charge). Refund and dispute webhook handlers need this: Stripe only
+ * gives them the PaymentIntent id, and a subscription order can't be found
+ * by that id in stripePaymentId alone.
+ */
+export async function findOrderByPaymentIntentId(paymentIntentId: string) {
+  return prisma.order.findFirst({
+    where: { OR: [{ stripePaymentId: paymentIntentId }, { stripeChargeId: paymentIntentId }] },
+  });
+}
+
 export interface CompactOrderItem {
   id: string;
   n: string;

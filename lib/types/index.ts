@@ -51,7 +51,7 @@ export interface Merch {
 export interface CartItem {
   key: string;
   id: string;
-  type: 'coffee' | 'sub' | 'merch' | 'gift';
+  type: 'coffee' | 'merch' | 'gift';
   name: string;
   variant: string;
   price: number;

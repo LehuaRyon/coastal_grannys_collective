@@ -23,10 +23,12 @@ function clearAutoClose() {
   if (autoCloseTimer) { clearTimeout(autoCloseTimer); autoCloseTimer = null; }
 }
 
-// Coffee first, then subscriptions (coffee-adjacent), then merch, then gift cards last —
-// alphabetical by name within each group. Used anywhere cart items are listed
-// (cart drawer, checkout order summary) so the order is consistent everywhere.
-const TYPE_ORDER: Record<CartItem['type'], number> = { coffee: 0, sub: 1, merch: 2, gift: 3 };
+// Coffee first, then merch, then gift cards last — alphabetical by name
+// within each group. Used anywhere cart items are listed (cart drawer,
+// checkout order summary) so the order is consistent everywhere.
+// Subscriptions never appear here — they're billed as real recurring
+// Stripe Subscriptions outside the one-time cart entirely (see SubscribeModal).
+const TYPE_ORDER: Record<CartItem['type'], number> = { coffee: 0, merch: 1, gift: 2 };
 
 export function sortCartItems(items: CartItem[]): CartItem[] {
   return [...items].sort((a, b) => {

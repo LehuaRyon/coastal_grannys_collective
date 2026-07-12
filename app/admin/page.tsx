@@ -1,12 +1,12 @@
 import Link from 'next/link';
 import { prisma } from '@/lib/db';
-import { PackageIcon, NotePencilIcon, ReceiptIcon, TrayIcon, UsersIcon, GiftIcon, WarningCircleIcon, CreditCardIcon } from '@phosphor-icons/react/dist/ssr';
+import { PackageIcon, NotePencilIcon, ReceiptIcon, TrayIcon, UsersIcon, GiftIcon, WarningCircleIcon, CreditCardIcon, ArrowsClockwiseIcon } from '@phosphor-icons/react/dist/ssr';
 import { CountUpStat } from '@/components/ui/CountUpStat';
 import { StripeBalanceCard } from '@/components/admin/StripeBalanceCard';
 import { WebhookHealthCard } from '@/components/admin/WebhookHealthCard';
 
 export default async function AdminDashboard() {
-  const [totalOrders, revenueResult, recentOrders, totalUsers, totalProducts, unreadSubmissions, giftCardBalanceResult, disputedOrders] = await Promise.all([
+  const [totalOrders, revenueResult, recentOrders, totalUsers, totalProducts, unreadSubmissions, giftCardBalanceResult, disputedOrders, activeSubscriptions] = await Promise.all([
     prisma.order.count(),
     prisma.order.aggregate({ _sum: { amount: true }, where: { status: 'paid' } }),
     prisma.order.findMany({ orderBy: { createdAt: 'desc' }, take: 5, include: { items: true } }),
@@ -19,6 +19,7 @@ export default async function AdminDashboard() {
       orderBy: { disputeDueBy: 'asc' },
       select: { id: true, amount: true, customerEmail: true, disputeReason: true, disputeDueBy: true },
     }),
+    prisma.subscription.count({ where: { status: 'active' } }),
   ]);
 
   const totalRevenue = revenueResult._sum.amount ?? 0;
@@ -37,6 +38,7 @@ export default async function AdminDashboard() {
     { label: 'Manage Products', desc: 'Add, edit, or remove coffees, subscriptions & merch', href: '/admin/products', icon: PackageIcon },
     { label: 'Edit Content', desc: 'Update homepage, about page & contact details', href: '/admin/content', icon: NotePencilIcon },
     { label: 'View Orders', desc: 'Full order history with customer details', href: '/admin/orders', icon: ReceiptIcon },
+    { label: 'Subscriptions', desc: 'Active plans, MRR, pause/cancel any subscription', href: '/admin/subscriptions', icon: ArrowsClockwiseIcon },
     { label: 'Payments', desc: 'Look up any payment, failed attempts & webhook activity', href: '/admin/payments', icon: CreditCardIcon },
     { label: 'Gift Cards', desc: 'Issue, credit, resend & audit e-gift cards', href: '/admin/gift-cards', icon: GiftIcon },
     { label: 'Submissions', desc: 'Contact, wholesale & coffee cart inquiries', href: '/admin/submissions', icon: TrayIcon },
@@ -58,6 +60,7 @@ export default async function AdminDashboard() {
           { label: 'Revenue', value: totalRevenue, prefix: '$', decimals: 2 },
           { label: 'Avg Order', value: totalOrders > 0 ? totalRevenue / totalOrders : 0, prefix: '$', decimals: 2 },
           { label: 'Gift Card Balance', value: outstandingGiftCardBalance, prefix: '$', decimals: 2 },
+          { label: 'Active Subs', value: activeSubscriptions },
           { label: 'Unread Msgs', value: unreadSubmissions },
           { label: 'Users', value: totalUsers },
         ].map((stat) => (

@@ -24,6 +24,8 @@ const DEFAULTS: ProductInput = {
   prices: null,
   freq: '',
   period: '',
+  billingInterval: '',
+  billingIntervalCount: 1,
   features: [],
   options: [],
   gradient: '',
@@ -68,6 +70,8 @@ export default function ProductForm({ product }: { product?: Product }) {
     prices: product.prices,
     freq: product.freq ?? '',
     period: product.period ?? '',
+    billingInterval: product.billingInterval ?? '',
+    billingIntervalCount: product.billingIntervalCount ?? 1,
     features: product.features ?? [],
     options: product.options ?? [],
     gradient: product.gradient ?? '',
@@ -110,12 +114,14 @@ export default function ProductForm({ product }: { product?: Product }) {
     if (!confirm(`Delete "${product?.name}"? This cannot be undone.`)) return;
     setDeleting(true);
     try {
-      await fetch(`/api/admin/products/${product!.id}`, { method: 'DELETE' });
+      const res = await fetch(`/api/admin/products/${product!.id}`, { method: 'DELETE' });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error ?? 'Failed to delete');
       showToast('Deleted');
       router.push('/admin/products');
       router.refresh();
-    } catch {
-      showToast('Failed to delete');
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : 'Failed to delete');
     } finally {
       setDeleting(false);
     }
@@ -255,9 +261,34 @@ export default function ProductForm({ product }: { product?: Product }) {
         <div className="bg-white rounded-xl border border-stone-100 p-5 space-y-4">
           <h2 className="font-medium text-stone-900 text-sm">Subscription Details</h2>
           <div className="grid grid-cols-2 gap-4">
-            <div><label className={labelClass}>Frequency</label><input type="text" {...f('freq')} className={inputClass} placeholder="e.g. Every 2 weeks" /></div>
-            <div><label className={labelClass}>Period</label><input type="text" {...f('period')} className={inputClass} placeholder="e.g. / month" /></div>
+            <div><label className={labelClass}>Frequency <span className="font-normal normal-case text-stone-400">(display text)</span></label><input type="text" {...f('freq')} className={inputClass} placeholder="e.g. Bi-weekly delivery" /></div>
+            <div><label className={labelClass}>Period <span className="font-normal normal-case text-stone-400">(display text)</span></label><input type="text" {...f('period')} className={inputClass} placeholder="e.g. /delivery" /></div>
           </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className={labelClass}>Billing Interval <span className="font-normal normal-case text-stone-400">(drives real Stripe billing)</span></label>
+              <select {...f('billingInterval')} className={inputClass}>
+                <option value="">— Not set (not purchasable yet) —</option>
+                <option value="week">Week</option>
+                <option value="month">Month</option>
+              </select>
+            </div>
+            <div>
+              <label className={labelClass}>Every N Intervals</label>
+              <input
+                type="number"
+                min="1"
+                value={form.billingIntervalCount ?? 1}
+                onChange={(e) => set('billingIntervalCount', parseInt(e.target.value) || 1)}
+                onKeyDown={(e) => blockInvalidNumberKey(e)}
+                className={inputClass}
+              />
+            </div>
+          </div>
+          <p className="text-xs text-stone-400">
+            E.g. Interval = Week, Every N = 2 bills every 2 weeks. This is what Stripe actually charges on — the
+            Frequency/Period text above is just what customers read.
+          </p>
           {arrayField(form.features ?? [], (v) => set('features', v), 'Features')}
           {arrayField(form.options ?? [], (v) => set('options', v), 'Roast Options shown to customer')}
           <p className="text-xs text-stone-400">Leave Roast Options empty to hide the roast picker. Add options like: Light, Medium, Medium-Dark, Dark</p>

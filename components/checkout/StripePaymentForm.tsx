@@ -14,9 +14,11 @@ interface StripePaymentFormProps {
   total: number;
   onSuccess: () => void;
   onBack: () => void;
+  /** Where Stripe redirects for payment methods that require it (bank redirects, etc.) — cards/Apple Pay/Google Pay stay in-page regardless. */
+  returnUrl?: string;
 }
 
-export function StripePaymentForm({ total, onSuccess, onBack }: StripePaymentFormProps) {
+export function StripePaymentForm({ total, onSuccess, onBack, returnUrl }: StripePaymentFormProps) {
   const stripe = useStripe();
   const elements = useElements();
   const [loading, setLoading] = useState(false);
@@ -34,7 +36,7 @@ export function StripePaymentForm({ total, onSuccess, onBack }: StripePaymentFor
       confirmParams: {
         // Stripe redirects here for some payment methods (e.g. bank redirects).
         // For cards, Apple Pay, Google Pay it stays in-page.
-        return_url: `${window.location.origin}/shop/coffee?order=confirmed`,
+        return_url: returnUrl ?? `${window.location.origin}/shop/coffee?order=confirmed`,
       },
       redirect: 'if_required',
     });

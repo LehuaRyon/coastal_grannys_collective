@@ -27,9 +27,14 @@ model User {
   state         String?
   zip           String?
   country       String?
+  // Created lazily on first subscription signup, then reused for any
+  // further subscriptions — Stripe Subscriptions require a Customer object
+  // (unlike the one-time cart checkout, which stays customer-less).
+  stripeCustomerId String? @unique
   accounts      Account[]
   sessions      Session[]
   orders        Order[]
+  subscriptions Subscription[]
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
@@ -79,8 +84,18 @@ model VerificationToken {
 model Order {
   id              String      @id @default(cuid())
   // Real Stripe PaymentIntent id, or a synthetic `giftcard_<cuid>` id for
-  // orders fully covered by gift card balance (no card charge at all).
+  // orders fully covered by gift card balance (no card charge at all), or
+  // a synthetic `sub_invoice_<invoiceId>` id for subscription-cycle orders
+  // (used as an idempotency key — see fulfillSubscriptionInvoice). For the
+  // synthetic-id cases, stripeChargeId (below) holds the REAL PaymentIntent
+  // id when one exists, so refunds/receipt lookups have something to call.
   stripePaymentId String      @unique
+  // Only set for subscription-cycle orders — the real PaymentIntent id
+  // resolved from invoice.payments (this API version nests it there, not
+  // as a top-level invoice field), since stripePaymentId itself is the
+  // synthetic sub_invoice_<id> idempotency key, not a real charge Stripe
+  // will recognize for a refund call.
+  stripeChargeId  String?
   amount          Float
   currency        String      @default("usd")
   status          String      @default("paid") // paid | partially_refunded | refunded | disputed
@@ -116,6 +131,14 @@ model Order {
   manualEntryBy   String?
   manualEntryNote String?
 
+  // Set when this order is one billing cycle's fulfillment of a
+  // subscription (created by the invoice.paid webhook handler) rather than
+  // a one-time cart checkout — reuses every existing Order admin/customer
+  // view instead of a parallel "shipment" concept.
+  subscriptionId        String?
+  subscription          Subscription? @relation(fields: [subscriptionId], references: [id], onDelete: SetNull)
+  subscriptionCycleNumber Int?
+
   // Gift card redemption — this order applied one or more gift cards toward its total
   giftCardRedemptions GiftCardRedemption[]
 
@@ -126,6 +149,43 @@ model Order {
   @@index([userId])
   @@index([createdAt])
   @@index([status])
+}
+
+// A recurring coffee subscription — mirrors a Stripe Subscription object
+// (which remains the source of truth for billing itself; this table is
+// what the app queries without hitting Stripe on every page load, kept in
+// sync by the customer.subscription.* and invoice.* webhook handlers).
+// price/productName/freq/roastPreference are snapshotted at signup so a
+// later change to the Product catalog doesn't silently alter what an
+// existing subscriber is being billed or shown.
+model Subscription {
+  id                   String    @id @default(cuid())
+  stripeSubscriptionId String    @unique
+  stripeCustomerId     String
+  userId               String
+  user                 User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  productId            String
+  productName          String
+  price                Float
+  freq                 String
+  roastPreference      String?
+  shippingAddress      Json?
+  // incomplete (awaiting first payment confirmation) | active | past_due |
+  // paused | canceled — mirrors Stripe's subscription.status, except
+  // "paused" is our own read of pause_collection being set (Stripe itself
+  // keeps status "active" while paused).
+  status               String    @default("incomplete")
+  currentPeriodEnd     DateTime?
+  cancelAtPeriodEnd    Boolean   @default(false)
+  canceledAt           DateTime?
+  pausedAt             DateTime?
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
+  orders               Order[]
+
+  @@index([userId])
+  @@index([status])
+  @@index([stripeCustomerId])
 }
 
 // A redeemable e-gift card. Created when a gift-type OrderItem's order is paid;
@@ -292,9 +352,21 @@ model Product {
   roast       String?
   notes       String[]
   prices      Json?    // { "12 oz": 22, "5 lb": 85 }
-  // Subscription-specific
-  freq        String?
-  period      String?
+  // Subscription-specific — freq/period are the free-text display copy
+  // ("Bi-weekly delivery", "/delivery"); billingInterval/billingIntervalCount
+  // are what actually drives Stripe billing (e.g. week + 2 = every 2 weeks)
+  // since the display text can't be parsed reliably. Both must be set for
+  // a subscription product to be purchasable — enforced in the signup API,
+  // not the DB, so a product can be drafted before its billing is configured.
+  freq                 String?
+  period               String?
+  billingInterval      String? // "week" | "month"
+  billingIntervalCount Int?    @default(1)
+  // Stripe requires an actual Product object (not inline data, unlike
+  // Checkout Sessions) for a Subscription's recurring price — created
+  // lazily on first signup and cached here so every subscriber to the same
+  // plan reuses one Stripe Product instead of minting a new one each time.
+  stripeProductId      String?
   features    String[]
   // Merch-specific
   options     String[]

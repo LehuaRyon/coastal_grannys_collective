@@ -2,11 +2,12 @@
 
 import { Button } from "@/components/ui/Button"
 import { showToast } from "@/components/ui/Toast"
-import { useCartStore } from "@/lib/store/cart"
 import type { Subscription } from "@/lib/types"
 import { ROAST_LEVELS } from "@/lib/constants/roast"
 import { CheckCircleIcon, PackageIcon } from "@phosphor-icons/react"
+import { SubscribeModal } from "@/components/shop/SubscribeModal"
 import { useRouter } from "next/navigation"
+import { useSession } from "next-auth/react"
 import { useState } from "react"
 
 export function SubsPageClient({
@@ -15,25 +16,17 @@ export function SubsPageClient({
   subscriptions: Subscription[]
 }) {
   const router = useRouter()
-  const { addItem } = useCartStore()
+  const { status } = useSession()
   const [roastPrefs, setRoastPrefs] = useState<Record<string, string>>({})
+  const [subscribing, setSubscribing] = useState<Subscription | null>(null)
 
   function handleSubscribe(sub: Subscription) {
-    const roast = roastPrefs[sub.id]
-    const variant =
-      roast && roast !== "No Preference"
-        ? `${sub.freq} · ${roast} Roast`
-        : sub.freq
-    addItem({
-      key: `${sub.id}-sub-${roast ?? "any"}`,
-      id: sub.id,
-      type: "sub",
-      name: sub.name,
-      variant,
-      price: sub.price,
-      gradient: sub.gradient,
-    })
-    showToast(`"${sub.name}" added to cart`)
+    if (status !== "authenticated") {
+      showToast("Log in to subscribe — so you can manage or cancel it later")
+      router.push(`/account/login?callbackUrl=/shop/subscriptions`)
+      return
+    }
+    setSubscribing(sub)
   }
 
   return (
@@ -175,6 +168,16 @@ export function SubsPageClient({
           </Button>
         </div>
       </div>
+
+      <SubscribeModal
+        sub={subscribing}
+        roastPreference={
+          subscribing && roastPrefs[subscribing.id] && roastPrefs[subscribing.id] !== "No Preference"
+            ? roastPrefs[subscribing.id]
+            : null
+        }
+        onClose={() => setSubscribing(null)}
+      />
     </section>
   )
 }

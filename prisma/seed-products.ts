@@ -469,6 +469,7 @@ async function main() {
   const subscriptions = [
     {
       slug: 's1', name: 'The Curious Granny', freq: 'Bi-weekly delivery', price: 18, period: '/delivery',
+      billingInterval: 'week', billingIntervalCount: 2,
       description: 'A rotating selection of light and medium roasts, curated fresh each delivery. Great for the everyday coffee lover who wants to explore without going too far down the experimental rabbit hole.',
       features: ['12 oz bag every 2 weeks', 'Roast notes card included', 'Free shipping always', 'Pause or cancel anytime'],
       gradient: 'linear-gradient(135deg,#5C3D10 0%,#9A6818 55%,#CC9818 100%)',
@@ -476,6 +477,7 @@ async function main() {
     },
     {
       slug: 's2', name: 'The Collector', freq: 'Monthly delivery', price: 55, period: '/month',
+      billingInterval: 'month', billingIntervalCount: 1,
       description: "Ryan's premium subscription featuring his most exciting finds — rare varieties, experimental co-ferments, and first access to limited lots. For the enthusiast who always wants the most interesting cup.",
       features: ['Two 12 oz bags monthly', 'First access to rare and limited lots', 'Detailed origin & process notes', 'Member discount on all shop orders', 'Free shipping always', 'Pause or cancel anytime'],
       gradient: 'linear-gradient(135deg,#3A4A28 0%,#6B7A4A 55%,#8A9660 100%)',
@@ -483,6 +485,7 @@ async function main() {
     },
     {
       slug: 's3', name: 'The Collective Stash', freq: 'Weekly delivery', price: 68, period: '/week',
+      billingInterval: 'week', billingIntervalCount: 1,
       description: "Keep the whole team caffeinated. A generous weekly delivery of Ryan's most popular roasts — perfect for offices and high-consumption households that go through coffee fast.",
       features: ['5 lb bag every week', 'Choose your roast level', 'Priority roasting support', 'Free shipping always', 'Flexible scheduling'],
       gradient: 'linear-gradient(135deg,#8A4A4A 0%,#C47878 55%,#E0A8A0 100%)',

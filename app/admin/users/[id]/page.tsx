@@ -2,6 +2,8 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { prisma } from '@/lib/db';
 import { ArrowLeftIcon } from '@phosphor-icons/react/dist/ssr';
+import { AdminSubscriptionActions } from '@/components/admin/AdminSubscriptionActions';
+import { SUBSCRIPTION_STATUS_COLORS } from '@/lib/constants/subscriptionStatus';
 
 const STATUS_COLORS: Record<string, string> = {
   paid: 'bg-green-100 text-green-700',
@@ -23,7 +25,7 @@ export default async function AdminUserDetailPage({ params }: { params: Promise<
   const user = await prisma.user.findUnique({ where: { id } });
   if (!user) notFound();
 
-  const [linkedOrders, guestOrders, giftCardsReceived, giftCardsPurchased, submissions] = await Promise.all([
+  const [linkedOrders, guestOrders, giftCardsReceived, giftCardsPurchased, submissions, subscriptions] = await Promise.all([
     prisma.order.findMany({ where: { userId: user.id }, include: { items: true }, orderBy: { createdAt: 'desc' } }),
     prisma.order.findMany({ where: { customerEmail: user.email, userId: null }, include: { items: true }, orderBy: { createdAt: 'desc' } }),
     prisma.giftCard.findMany({ where: { recipientEmail: user.email }, orderBy: { createdAt: 'desc' } }),
@@ -33,6 +35,7 @@ export default async function AdminUserDetailPage({ params }: { params: Promise<
       orderBy: { createdAt: 'desc' },
     }),
     prisma.submission.findMany({ where: { senderEmail: user.email }, orderBy: { createdAt: 'desc' } }),
+    prisma.subscription.findMany({ where: { userId: user.id }, orderBy: { createdAt: 'desc' } }),
   ]);
 
   const orders = [...linkedOrders, ...guestOrders].sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
@@ -93,6 +96,30 @@ export default async function AdminUserDetailPage({ params }: { params: Promise<
           )}
         </div>
       </div>
+
+      {subscriptions.length > 0 && (
+        <div className="bg-white rounded-xl border border-stone-100 overflow-hidden">
+          <div className="px-6 py-4 border-b border-stone-100">
+            <h2 className="font-medium text-stone-900">Subscriptions</h2>
+          </div>
+          <div className="divide-y divide-stone-50">
+            {subscriptions.map((sub) => (
+              <div key={sub.id} className="px-6 py-3 flex items-center justify-between text-sm">
+                <div>
+                  <p className="text-stone-900">
+                    {sub.productName}
+                    <span className={`ml-2 inline-flex px-2 py-0.5 rounded-full text-[10px] font-semibold uppercase tracking-wide ${SUBSCRIPTION_STATUS_COLORS[sub.status] ?? 'bg-stone-100 text-stone-600'}`}>
+                      {sub.status}
+                    </span>
+                  </p>
+                  <p className="text-xs text-stone-400">${sub.price.toFixed(2)} · {sub.freq}</p>
+                </div>
+                <AdminSubscriptionActions id={sub.id} status={sub.status} />
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       <div className="bg-white rounded-xl border border-stone-100 overflow-hidden">
         <div className="px-6 py-4 border-b border-stone-100">

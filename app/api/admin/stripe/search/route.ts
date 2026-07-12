@@ -49,11 +49,20 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: message }, { status: 400 });
   }
 
+  // Checks stripeChargeId too, not just stripePaymentId — a subscription-
+  // cycle order's stripePaymentId is a synthetic sub_invoice_<id> (not this
+  // real PaymentIntent id), so a search for its actual charge id would
+  // otherwise show "No order" for a charge that really does have one.
+  const ids = paymentIntents.map((pi) => pi.id);
   const existingOrders = await prisma.order.findMany({
-    where: { stripePaymentId: { in: paymentIntents.map((pi) => pi.id) } },
-    select: { id: true, stripePaymentId: true },
+    where: { OR: [{ stripePaymentId: { in: ids } }, { stripeChargeId: { in: ids } }] },
+    select: { id: true, stripePaymentId: true, stripeChargeId: true },
   });
-  const orderByPaymentId = new Map(existingOrders.map((o) => [o.stripePaymentId, o.id]));
+  const orderByPaymentId = new Map<string, string>();
+  for (const o of existingOrders) {
+    orderByPaymentId.set(o.stripePaymentId, o.id);
+    if (o.stripeChargeId) orderByPaymentId.set(o.stripeChargeId, o.id);
+  }
 
   const results = paymentIntents.map((pi) => ({
     id: pi.id,

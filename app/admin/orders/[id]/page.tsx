@@ -27,6 +27,11 @@ export default async function AdminOrderDetailPage({ params }: { params: Promise
   const addr = order.shippingAddress as Record<string, string> | null;
   const isGiftCardOnly = order.stripePaymentId.startsWith('giftcard_');
   const isManual = order.stripePaymentId.startsWith('manual_');
+  // Subscription-cycle orders use a synthetic sub_invoice_<id> as
+  // Order.stripePaymentId (an idempotency key, not a real charge) — the
+  // real PaymentIntent id, when resolved, lives in stripeChargeId instead.
+  const isSubscriptionCycle = order.stripePaymentId.startsWith('sub_invoice_');
+  const realPaymentId = order.stripeChargeId ?? (isSubscriptionCycle ? null : order.stripePaymentId);
   const alreadyRefunded = order.refundedAmount ?? 0;
   const maxRefundable = Math.max(0, order.amount - alreadyRefunded);
 
@@ -40,11 +45,11 @@ export default async function AdminOrderDetailPage({ params }: { params: Promise
   let receiptUrl: string | null = null;
   let riskLevel: string | null = null;
   let riskScore: number | null = null;
-  if (!isGiftCardOnly && !isManual) {
+  if (!isGiftCardOnly && !isManual && realPaymentId) {
     try {
       const stripe = getStripeClient();
       if (stripe) {
-        const pi = await stripe.paymentIntents.retrieve(order.stripePaymentId, {
+        const pi = await stripe.paymentIntents.retrieve(realPaymentId, {
           expand: ['latest_charge', 'latest_charge.payment_method_details'],
         });
         const charge = pi.latest_charge;
@@ -227,6 +232,11 @@ export default async function AdminOrderDetailPage({ params }: { params: Promise
               <p className="text-xs text-stone-400 mt-4 pt-4 border-t border-stone-100">
                 Fully covered by gift card — nothing was charged via Stripe, so there&apos;s nothing to refund here.
                 Use Void/Credit on the gift card itself from /admin/gift-cards.
+              </p>
+            ) : isSubscriptionCycle && !realPaymentId ? (
+              <p className="text-xs text-amber-700 mt-4 pt-4 border-t border-stone-100">
+                Couldn&apos;t find the underlying charge for this subscription order yet — try Resync on the subscription
+                (from its detail page), then reload this order.
               </p>
             ) : maxRefundable > 0 ? (
               <div className="mt-4 pt-4 border-t border-stone-100">

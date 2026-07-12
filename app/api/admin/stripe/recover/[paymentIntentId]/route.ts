@@ -35,6 +35,19 @@ export async function POST(_req: Request, { params }: { params: Promise<{ paymen
     return NextResponse.json({ error: `PaymentIntent status is "${pi.status}", not succeeded — nothing to recover` }, { status: 400 });
   }
 
+  // Defense in depth against the same bug fixed in handlePaymentSucceeded —
+  // a PaymentIntent Stripe created internally for a subscription invoice
+  // has no metadata.items (only our one-time cart checkout sets that), so
+  // recovering it here would create an empty, customer-less duplicate order.
+  // The orphaned-payments scan that feeds this route already filters these
+  // out, but this route is reachable directly by id, so it needs its own guard.
+  if (!pi.metadata?.items) {
+    return NextResponse.json(
+      { error: 'This looks like a subscription invoice charge, not a one-time checkout — use Resync on the subscription itself (/admin/subscriptions) instead.' },
+      { status: 400 }
+    );
+  }
+
   const order = await fulfillOrder(buildFulfillOrderInputFromPaymentIntent(pi));
   return NextResponse.json({ order });
 }

@@ -259,12 +259,16 @@ Built so an admin unfamiliar with Stripe or Postgres never needs to touch either
 | Export transactions for accounting | Orders → Export CSV |
 | One customer's full history | Users → customer detail |
 
-**Deliberately still console-only** — these were evaluated and left out on purpose, not overlooked:
-- **Full dispute evidence submission.** The dashboard surfaces every dispute (reason, amount, due date) and reconciles the outcome automatically once Stripe resolves it, but *submitting evidence* to actually contest a chargeback requires Stripe's structured, file-upload-driven form. Replicating that in-app has poor ROI against the visibility already built — an admin gets a due-by warning here, then finishes the response in Stripe.
-- **Payout schedule / bank account changes.** Changing where or how often money lands requires Stripe's own KYC-verified flow — this is a compliance boundary, not a missing feature, and no app UI can legally substitute for it.
-- **Tax documents (1099-K) and identity verification.** Same compliance category — these must be accessed and completed directly in Stripe.
-- **Neon backups / point-in-time restore.** Infrastructure-level, "break glass" only. Wiring database restore into an app UI would be a bigger risk than any problem it solves — this should always require deliberately opening Neon's console.
-- **Raw SQL / a database console.** Would directly contradict the goal of admins not needing to understand these tools — it's the single most dangerous way to hand someone unfamiliar with SQL access to production data.
+As of 2026-07-12, after three separate audit passes, this is genuinely as complete as it gets — everything operationally relevant to running the store day-to-day is in the app. What's left falls into exactly two buckets, and both are excluded on purpose:
+
+**Bucket 1 — compliance-locked.** Stripe legally requires these go through their own KYC-verified flow; no app UI, however well-built, can substitute for it:
+- **Full dispute evidence submission.** The dashboard surfaces every dispute (reason, amount, due date) and reconciles the outcome automatically once Stripe resolves it, but *submitting evidence* to actually contest a chargeback requires Stripe's structured, file-upload-driven form.
+- **Payout schedule / bank account changes.** Changing where or how often money lands requires re-verifying identity/banking details through Stripe directly — this is a fraud-prevention boundary, not a missing feature.
+- **Tax documents (1099-K) and identity verification.** Same compliance category — legally must be issued/completed by Stripe, not a third-party app.
+
+**Bucket 2 — infrastructure-only, kept out on purpose.** These *could* technically be wired into an app UI, but doing so would trade a small convenience for a large, unnecessary risk:
+- **Neon backups / point-in-time restore.** A "break glass" action — restoring a database is rare, high-stakes, and should require deliberately opening Neon's console as a natural speed bump against doing it by accident or under pressure.
+- **Raw SQL / a database console.** The entire point of this dashboard is that an admin unfamiliar with SQL or Postgres never needs to touch either — building one in just to save a click would hand that same admin the single most dangerous tool available (unrestricted read/write on production data) with none of the guardrails the purpose-built admin pages have.
 
 ---
 
@@ -298,14 +302,6 @@ The `/shop/coffee` page has four client-side filters:
 
 ---
 
-## Subscription Roast Preferences
-
-If a subscription product has roast options set (via `Product.options`), a roast picker appears on the subscriptions page. The selected roast is included in the cart item variant (e.g. "Weekly delivery · Light Roast") and flows through to `OrderItem.variant` in the database.
-
-To show the roast picker for a subscription: go to Admin → Products → edit the subscription → add options like `Light, Medium, Medium-Dark, Dark` in the "Roast Options" field. Leave empty to hide the picker.
-
----
-
 ## Site Content (CMS)
 
 The `SiteContent` table stores editable text for five pages, keyed by `page + key`:
@@ -329,6 +325,50 @@ The `SiteContent` table stores editable text for five pages, keyed by `page + ke
 5. Customer pays (card/Apple Pay/Google Pay)
 6. Stripe fires `payment_intent.succeeded` webhook → `/api/webhooks/stripe`
 7. Webhook verifies Stripe signature, looks up customer by email (links order to account if found), saves `Order` + `OrderItem` rows to DB
+
+---
+
+## Subscriptions
+
+Real recurring billing via the Stripe Subscriptions API — separate from the one-time cart checkout above. Subscriptions never go through the cart at all: mixing a recurring line item with a one-time PaymentIntent doesn't work, so clicking "Subscribe" on `/shop/subscriptions` opens a dedicated `SubscribeModal` instead.
+
+**Configuring a plan** (Admin → Products → a `subscription`-type product): `Frequency`/`Period` are free-text display copy only ("Bi-weekly delivery", "/delivery"); `Billing Interval` + `Every N Intervals` are what actually drive Stripe billing (e.g. Week + 2 = bills every 2 weeks) — a plan isn't purchasable until both are set. Roast options work the same as before: set them on the product to show a roast picker in the signup modal.
+
+**Signup flow:** requires login (self-service pause/cancel needs a reliable owner — a guest email can't provide that). Creates a Stripe Customer (cached on `User.stripeCustomerId`) and a Stripe Product (cached on `Product.stripeProductId`, since the Subscriptions API needs a real Product id for its recurring price, unlike Checkout Sessions' inline `product_data`) on first use, then a Subscription with `payment_behavior: 'default_incomplete'`. The first payment is confirmed with the *same* embedded Stripe Elements form as one-time checkout (`StripePaymentForm`), using the invoice's `confirmation_secret.client_secret`.
+
+**Keeping in sync:** a local `Subscription` table mirrors Stripe's own object (Stripe remains the source of truth for billing) via these webhook events:
+- `customer.subscription.updated` — syncs status/current period end/cancel-at-period-end. Our own `paused` status is inferred from `pause_collection` being set (Stripe itself keeps status `active` while paused).
+- `customer.subscription.deleted` — terminal; sends the cancellation email.
+- `invoice.paid` — the actual fulfillment trigger. Creates a real `Order` for that cycle (`Order.subscriptionId` + `subscriptionCycleNumber`), reusing all existing order admin/customer views rather than a separate "shipment" concept. Sends the welcome email on the first cycle (`billing_reason: 'subscription_create'`), a renewal email on every one after.
+- `invoice.payment_failed` — customer + admin alert emails (status sync to `past_due` is handled by `.updated`, which fires alongside this).
+
+**Self-service** (account dashboard): Pause, Resume, Cancel, edit shipping address, change roast preference, update payment method. Cancel is graceful (`cancel_at_period_end: true` — keeps what's already paid for); Resume doubles as "undo" for either a pause or a scheduled cancellation. Shipping address and roast preference are pure DB fields (not Stripe concepts for a custom `price_data` subscription) — changes take effect on the next delivery, not retroactively. Roast preference is validated against the plan's *current* `Product.options` (an admin can change which roasts a plan offers after a customer has already subscribed — an old choice that's no longer offered is left alone rather than silently reset, but a new save must pick from the current list). Payment method update uses a SetupIntent (`stripe.confirmSetup`, not `confirmPayment` — it validates/saves a card without charging it) via a dedicated `UpdatePaymentMethodForm`, then sets the result as the `default_payment_method` on both the Stripe subscription and customer; surfaced prominently (red, with an explanatory line) whenever a subscription is `past_due`/`unpaid`.
+
+**Admin** (`/admin/subscriptions` list + `/admin/subscriptions/[id]` detail page): every self-service action available for any subscription (admin Cancel is immediate, not period-end; admin Pause/Resume/roast-change mirror the customer versions), an MRR estimate normalized across different billing cadences, a CSV export (mirrors `ExportOrdersButton` — pulling subscription/MRR numbers into a spreadsheet shouldn't require the Stripe Dashboard), and:
+- **Detail page** — cycle/order history, live card-on-file summary (brand/last4, pulled fresh from Stripe), customer link, plan/billing timeline (paused-since/canceled-at), and editable shipping address + roast preference, all in one place, matching the order detail page's layout pattern.
+- **Resync** — re-checks a subscription's live Stripe status and re-fulfills any of its last 12 paid invoices that don't have a matching Order yet. The manual fix for a missed webhook.
+- **Retry Payment** — shown whenever a subscription is `past_due`/`unpaid`; attempts to charge the current open invoice right now with whatever payment method is currently the default, instead of waiting on Stripe's own Smart Retry schedule (which can take days). The same retry also fires automatically the instant a *customer* successfully updates their own card, so fixing the card actually unblocks the subscription immediately rather than leaving them stuck until the next scheduled attempt.
+- **Missing-fulfillment banner** — proactively scans every non-terminal subscription's last 2 paid invoices against existing Orders on every admin subscriptions page load, and surfaces a one-click "Recover" (same underlying logic as Resync) for any gap it finds — so a missed webhook doesn't require an admin to notice on their own.
+- **Abandoned-signup cleanup cron** (`/api/cron/cleanup-abandoned-subscriptions`, daily) — a subscription created with `payment_behavior: 'default_incomplete'` sits at DB status `incomplete` from the moment it's created, before payment is confirmed. After 24h: if Stripe shows it actually succeeded (webhook missed), recovers it exactly like a manual Resync; if it's genuinely still unpaid, cancels it in Stripe and marks it `incomplete_expired` rather than leaving it billable indefinitely.
+
+Deliberately **not** built: admin editing a subscription's price/discount, and admin creating a subscription on a customer's behalf (a phone order). Both were considered and left out — a price change needs a proration decision (charge/credit the difference now vs. next cycle) that's a real product decision, not just a missing button, and manual subscription creation would mean an admin handling a customer's raw card number, which crosses the same PCI line noted for payment-method updates. Revisit if either becomes a real recurring request.
+
+⚠️ **API version note:** this account's Stripe API version (`2026-05-27.dahlia`) restructured the Invoice object enough that some commonly-documented patterns don't apply as-is:
+- `latest_invoice.confirmation_secret` needs its own explicit expand (not included by a plain `latest_invoice` expand).
+- The subscription id lives at `invoice.parent.subscription_details.subscription`, not a top-level `invoice.subscription` field.
+- The real PaymentIntent/Charge id for a paid invoice lives at `invoice.payments.data[0].payment.payment_intent` (via `invoices.retrieve(id, { expand: ['payments.data.payment.payment_intent'] })` — a list call with the same expand path exceeds Stripe's 4-level expand depth limit, so it must be a single retrieve), not a top-level `invoice.payment_intent` field.
+
+All three were confirmed by direct testing against real invoice objects during development, not assumed from general docs — if Stripe's API version changes, re-verify before trusting any of them.
+
+⚠️ **Bug found and fixed during a later audit pass (2026-07-12):** every subscription charge — signup and every renewal — was silently creating a **second, orphaned Order** with no customer/subscription link, because the generic one-time-checkout webhook handler (`payment_intent.succeeded`) fires for *every* successful PaymentIntent project-wide, including the ones Stripe auto-creates internally when it finalizes a subscription invoice. That handler is now guarded to skip any PaymentIntent lacking `metadata.items` (always set by real one-time cart checkouts, never set by Stripe's own auto-created ones) — see `handlePaymentSucceeded` in the webhook route. A related, more serious symptom: because a subscription order's `Order.stripePaymentId` is a synthetic `sub_invoice_<id>` (an idempotency key, not a real charge), **refunding a subscription-cycle order from the admin order page silently updated the wrong order** — the orphan, not the real one — leaving the real order stuck showing "paid" forever even after Stripe genuinely refunded the money. Fixed by resolving and storing the real PaymentIntent id separately (`Order.stripeChargeId`, resolved via the `invoice.payments` path above) and having refund/dispute webhook handlers look up orders by *either* field (`findOrderByPaymentIntentId` in `lib/orderFulfillment.ts`). Resync also now backfills `stripeChargeId` on any older order missing it, so this self-heals without a separate migration script. Found by testing the refund flow live end-to-end rather than trusting the code read-through — the duplicate order was invisible until a refund exposed which order the webhook actually updated.
+
+That same `metadata.items` guard was then also needed in two more places that share the "does this PaymentIntent have a one-time-checkout Order?" question — both found by re-checking every `stripePaymentId` call site after the fix above, not by symptom: the **orphaned-payments scan** (`/api/admin/stripe/orphaned-payments`, feeds the banner on `/admin/orders`) would otherwise flag *every* successful subscription charge as an "orphaned payment" needing recovery, since it never has a matching `stripePaymentId`; and its **Recover** action (`/api/admin/stripe/recover/[paymentIntentId]`, also reachable from the Payments page's search results) would recreate the exact duplicate-order bug above if an admin clicked Recover on one of those false positives. Both now skip/reject PaymentIntents without `metadata.items`, with a message pointing to subscription Resync instead. The Payments search itself was also updated to check `stripeChargeId` too, so looking up a subscription charge's real PaymentIntent id by hand correctly shows its existing order instead of "no order."
+
+⚠️ **Two more bugs found on a further audit pass:** (1) `DELETE /api/admin/products/[id]` had no guard against deleting a subscription-type product while customers were actively subscribed to it — `Subscription.productId` is a plain string, not a real foreign key, so this wouldn't fail at the DB level, it would just silently orphan the reference. Roast preference lives against the plan's *live* `Product.options` and MRR against its *live* billing interval (neither is snapshotted onto `Subscription`), so deleting the plan would silently break roast-changes and undercount MRR for existing subscribers with no error anywhere. Now blocked with a clear message if any `active`/`paused`/`past_due`/`unpaid` subscription still references the product. (2) Separately — and this one wasn't subscription-specific, it just surfaced while testing the fix above — `ProductForm.tsx`'s delete handler never checked the fetch response status at all, so *any* delete failure (this new guard, or any future server error) would still show a false "Deleted" toast and navigate away as if it worked. Fixed to check `res.ok` and surface the real error. Both confirmed live: deleting an actively-subscribed test plan correctly blocks with the real error message shown in the UI; deleting it again after canceling the one subscription succeeds.
+
+⚠️ **Race condition found and fixed:** Pause, Resume, and Cancel (both self-service and admin, 6 routes total) only ever updated Stripe directly and relied entirely on the async `customer.subscription.updated` webhook to sync the local DB — a deliberate original design choice to keep one source of truth regardless of whether a change came from this app or the Stripe Dashboard. In practice this meant `router.refresh()` on the client could re-fetch the page *before* the webhook landed, showing stale state for a few seconds right after clicking — caught live running a full signup-through-cancel customer journey in one continuous session: clicking "Un-cancel" showed a "Subscription resumed" toast while the visible UI still showed "Ends [date]" and an "Un-cancel" button, for several real seconds, before quietly correcting itself once the webhook caught up. Fixed by having all 6 routes call the existing `syncSubscriptionFromStripe()` synchronously on the Subscription object Stripe's own API response already provides, immediately after the update succeeds — removing the race entirely rather than working around it with a delay or polling. The webhook still fires and re-applies the same state when it arrives; harmless, since the sync is idempotent, and it still owns `canceledAt`/cancellation email on immediate admin cancel. Verified fixed with a deliberately short (2–2.5s) wait on already-warm routes, both self-service and admin — the exact race window that failed before now shows correct state immediately.
+
+⚠️ **Stale "Next billing" date after cancellation:** `Subscription.currentPeriodEnd` is just a snapshot of the last period-end Stripe reported — once a subscription reaches `canceled` or `incomplete_expired`, that date is history, not a future billing date, but the admin list page, the detail page (worse: labeled "Next billing" there, not just an unlabeled date), and the CSV export all displayed it unconditionally. Found by actually reading the CSV export's output rather than just confirming the button exists — a canceled test subscription's row showed a real-looking future "Next Billing" date next to `status: canceled`, which would mislead anyone using the export for accounting. All three now blank/omit it once the subscription is terminal; the detail page's "Canceled: [date]" line already answers the "when did this actually end" question.
 
 ---
 
@@ -461,7 +501,7 @@ These don't block launch but directly affect how much money the site makes.
 
 | #   | Task                                                                                                                                                 | Where                                                               |
 | --- | ---------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------- |
-| 7   | **Swap Stripe subscriptions to recurring billing** — subscriptions currently charge as one-time payments, so customers aren't automatically rebilled | `app/api/create-payment-intent/route.ts` + Stripe Subscriptions API |
+| 7   | ✅ **Swap Stripe subscriptions to recurring billing** — done; real Stripe Subscriptions API billing, full self-service + admin management — see "Subscriptions" section above | `lib/subscriptions.ts`, `app/admin/subscriptions/`                  |
 | 8   | **Gift card email delivery** — currently adds to cart and records the order but never emails the recipient a code or balance                         | Need email service + gift card redemption logic                     |
 | 9   | **"Your order has shipped" email** — admin marks order shipped, customer gets a notification                                                         | Admin orders page + email service                                   |
 
@@ -523,7 +563,7 @@ This likely needs a new admin settings model (e.g. `SiteVisibilitySettings`) sto
 - ✅ Responsive design (mobile, tablet, desktop)
 - ✅ Coffee page with roast, origin, tasting notes, and stock filters
 - ✅ Coffee product modal with size selection and out-of-stock handling
-- ✅ Subscription plans with admin-configurable roast preference picker
+- ✅ Real recurring subscriptions (Stripe Subscriptions API) with admin-configurable roast preference picker, self-service pause/resume/cancel, and per-cycle order fulfillment — see "Subscriptions" below
 - ✅ Merch grid with option selector
 - ✅ Gift cards (preset amounts + custom amount + recipient email)
 - ✅ Wholesale inquiry form
@@ -552,13 +592,11 @@ This likely needs a new admin settings model (e.g. `SiteVisibilitySettings`) sto
 
 ### Email / Transactional
 
-- ❌ Gift card email delivery — order recorded but not sent to recipient (uses the same Resend integration, just not wired to the gift card flow yet)
-- ❌ Fulfillment / "your order has shipped" emails (same — Resend is wired up, just not triggered from the orders page yet)
+- ❌ Fulfillment / "your order has shipped" emails (Resend is wired up, just not triggered from the orders page yet — gift cards and subscriptions already send their own transactional emails)
 - ❌ Inbound email threading is code-complete but requires a verified domain + MX record + Resend webhook — see `INBOUND_EMAIL_DOMAIN` in `.env.local.example`
 
 ### Payments / Subscriptions
 
-- ❌ Recurring subscriptions — charged as one-time payments (needs Stripe Subscriptions API)
 - ❌ Calculated shipping rates — flat rate only: free over $60, $8 otherwise
 
 ### Admin Dashboard

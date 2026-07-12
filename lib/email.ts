@@ -237,6 +237,148 @@ export async function sendOrderConfirmationEmail({
   });
 }
 
+// Sent once, when a subscription's first payment succeeds (billing_reason
+// 'subscription_create' on the invoice.paid webhook) — the in-app modal
+// already shows a confirmation screen, but an email receipt is still the
+// standard expectation for a recurring charge someone just signed up for.
+export async function sendSubscriptionConfirmationEmail({
+  to,
+  customerName,
+  productName,
+  price,
+  freq,
+}: {
+  to: string;
+  customerName: string | null;
+  productName: string;
+  price: number;
+  freq: string;
+}) {
+  await sendEmail({
+    to,
+    subject: `You're subscribed to ${productName}!`,
+    text: [
+      `Hi ${customerName || 'there'},`,
+      '',
+      `Your ${productName} subscription is confirmed — $${price.toFixed(2)} charged today, then again ${freq.toLowerCase()} until you pause or cancel.`,
+      '',
+      'Manage, pause, or cancel anytime from your account — no need to contact us.',
+    ].join('\n'),
+  });
+}
+
+// Sent on every renewal (billing_reason 'subscription_cycle') — separate
+// from the one-time welcome email above so a subscriber isn't confused by
+// a "you're subscribed!" email on their fifth delivery.
+export async function sendSubscriptionRenewalEmail({
+  to,
+  customerName,
+  productName,
+  price,
+  cycleNumber,
+}: {
+  to: string;
+  customerName: string | null;
+  productName: string;
+  price: number;
+  cycleNumber: number;
+}) {
+  await sendEmail({
+    to,
+    subject: `Your ${productName} subscription renewed`,
+    text: [
+      `Hi ${customerName || 'there'},`,
+      '',
+      `Delivery #${cycleNumber} of your ${productName} subscription is on its way — $${price.toFixed(2)} charged to your card on file.`,
+      '',
+      'Manage, pause, or cancel anytime from your account.',
+    ].join('\n'),
+  });
+}
+
+// Sent when a renewal charge fails — Stripe will retry automatically per
+// its default retry schedule, but the customer needs to know now rather
+// than discover it when a delivery silently doesn't arrive.
+export async function sendSubscriptionPaymentFailedEmail({
+  to,
+  customerName,
+  productName,
+}: {
+  to: string;
+  customerName: string | null;
+  productName: string;
+}) {
+  await sendEmail({
+    to,
+    subject: `Payment failed for your ${productName} subscription`,
+    text: [
+      `Hi ${customerName || 'there'},`,
+      '',
+      `We couldn't charge your card for your ${productName} subscription renewal. We'll automatically retry, but you may want to update your payment method from your account to avoid an interruption.`,
+    ].join('\n'),
+  });
+}
+
+export async function sendSubscriptionCanceledEmail({
+  to,
+  customerName,
+  productName,
+}: {
+  to: string;
+  customerName: string | null;
+  productName: string;
+}) {
+  await sendEmail({
+    to,
+    subject: `Your ${productName} subscription has been cancelled`,
+    text: [
+      `Hi ${customerName || 'there'},`,
+      '',
+      `Your ${productName} subscription has been cancelled — no further charges will occur. You're welcome back anytime.`,
+    ].join('\n'),
+  });
+}
+
+export async function sendSubscriptionPausedEmail({
+  to,
+  customerName,
+  productName,
+}: {
+  to: string;
+  customerName: string | null;
+  productName: string;
+}) {
+  await sendEmail({
+    to,
+    subject: `Your ${productName} subscription is paused`,
+    text: [
+      `Hi ${customerName || 'there'},`,
+      '',
+      `Your ${productName} subscription is paused — no charges or deliveries until you resume it from your account.`,
+    ].join('\n'),
+  });
+}
+
+export async function sendSubscriptionResumedEmail({
+  to,
+  customerName,
+  productName,
+}: {
+  to: string;
+  customerName: string | null;
+  productName: string;
+}) {
+  await sendEmail({
+    to,
+    subject: `Your ${productName} subscription is back on`,
+    text: [
+      `Hi ${customerName || 'there'},`,
+      '',
+      `Your ${productName} subscription has been resumed — billing and deliveries continue as normal.`,
+    ].join('\n'),
+  });
+}
+
 // Plus-addressed Reply-To so a customer's email reply can be routed back to
 // this submission's thread by the inbound webhook. Only works once
 // INBOUND_EMAIL_DOMAIN has a verified Resend receiving domain — see

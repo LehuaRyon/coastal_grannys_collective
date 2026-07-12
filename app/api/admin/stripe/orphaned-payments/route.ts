@@ -32,7 +32,16 @@ export async function GET() {
   for (let page = 0; page < 5; page++) {
     const list = await stripe.paymentIntents.list({ limit: 100, created: { gte: since }, starting_after: startingAfter });
     for (const pi of list.data) {
-      if (pi.status === 'succeeded') succeeded.push(pi);
+      // Excludes PaymentIntents Stripe creates internally for subscription
+      // invoice charges — those are never "orphaned one-time checkouts" to
+      // begin with (metadata.items is only ever set by our one-time cart
+      // checkout, same signal handlePaymentSucceeded uses). They have their
+      // own dedicated recovery tooling (subscription Resync + the
+      // missing-fulfillment banner on /admin/subscriptions) — without this
+      // filter, every successful subscription charge would falsely show up
+      // here, and clicking "Recover" on one would recreate the duplicate-
+      // order bug fixed earlier this session via a different path.
+      if (pi.status === 'succeeded' && pi.metadata?.items) succeeded.push(pi);
     }
     if (!list.has_more) break;
     startingAfter = list.data[list.data.length - 1]?.id;
