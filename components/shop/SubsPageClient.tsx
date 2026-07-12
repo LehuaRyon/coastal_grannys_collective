@@ -4,7 +4,8 @@ import { Button } from "@/components/ui/Button"
 import { showToast } from "@/components/ui/Toast"
 import { useCartStore } from "@/lib/store/cart"
 import type { Subscription } from "@/lib/types"
-import { CheckIcon, PackageIcon } from "@phosphor-icons/react"
+import { ROAST_LEVELS } from "@/lib/constants/roast"
+import { CheckCircleIcon, PackageIcon } from "@phosphor-icons/react"
 import { useRouter } from "next/navigation"
 import { useState } from "react"
 
@@ -31,7 +32,6 @@ export function SubsPageClient({
       variant,
       price: sub.price,
       gradient: sub.gradient,
-      icon: "☕",
     })
     showToast(`"${sub.name}" added to cart`)
   }
@@ -89,11 +89,11 @@ export function SubsPageClient({
                     key={f}
                     className="flex items-start gap-2 text-sm text-stone-600"
                   >
-                    <CheckIcon
-                      size={14}
-                      weight="bold"
-                      color="#CC9818"
-                      className="mt-0.5 flex-shrink-0"
+                    <CheckCircleIcon
+                      size={18}
+                      weight="duotone"
+                      color="#C8921A"
+                      className="flex-shrink-0 mt-0.5"
                     />
                     {f}
                   </li>
@@ -107,7 +107,7 @@ export function SubsPageClient({
                     Roast Preference
                   </p>
                   <div className="flex flex-wrap gap-1.5">
-                    {["No Preference", ...sub.roastOptions].map((r) => {
+                    {["No Preference", ...ROAST_LEVELS].map((r) => {
                       const active =
                         (roastPrefs[sub.id] ?? "No Preference") === r
                       return (

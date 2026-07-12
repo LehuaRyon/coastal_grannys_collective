@@ -64,7 +64,6 @@ const METHODS = [
   },
   {
     name: "AeroPress",
-    icon: "🧪",
     tagline: "Forgiving, versatile, consistently great",
     grind: "Medium to medium-fine (adjust by recipe)",
     ratio: "1:10–1:15 · e.g. 15g coffee → 200g water",
@@ -97,7 +96,6 @@ const METHODS = [
   },
   {
     name: "French Press",
-    icon: "🫖",
     tagline: "Full body, classic strength",
     grind: "Coarse (sea salt or peppercorn)",
     ratio: "1:12–1:15 · e.g. 30g coffee → 360–450g water",
@@ -129,7 +127,6 @@ const METHODS = [
   },
   {
     name: "Cold Brew",
-    icon: "🧊",
     tagline: "Smooth, low-acid, and co-ferment-friendly",
     grind: "Extra coarse (breadcrumb texture)",
     ratio: "1:5 for concentrate · 1:8 for ready-to-drink",
@@ -159,7 +156,6 @@ const METHODS = [
   },
   {
     name: "Moka Pot",
-    icon: "☕",
     tagline: "Stovetop strength without an espresso machine",
     grind: "Fine (finer than drip, coarser than espresso)",
     ratio: "Fill the basket level · water to the valve",
@@ -186,7 +182,6 @@ const METHODS = [
   },
   {
     name: "Drip / Batch Brew",
-    icon: "🔌",
     tagline: "Consistent, convenient, best with a good machine",
     grind: "Medium (kosher salt texture)",
     ratio: "1:16–1:17 · ~60g per liter of water",
@@ -216,7 +211,6 @@ const METHODS = [
   },
   {
     name: "Espresso",
-    icon: "⚡",
     tagline: "Intensity, precision, and the highest ceiling",
     grind: "Extra fine (finer than table salt)",
     ratio: "1:1.5–1:2.5 · e.g. 18g in → 27–45g out",

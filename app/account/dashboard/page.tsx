@@ -4,6 +4,7 @@ import { prisma } from '@/lib/db';
 import Link from 'next/link';
 import { SignOutButton } from '@/components/auth/SignOutButton';
 import { AddressCard } from '@/components/account/AddressCard';
+import { GiftCardList } from '@/components/account/GiftCardList';
 
 export const metadata = { title: "My Account — Coastal Granny's Collective" };
 
@@ -54,6 +55,16 @@ export default async function AccountDashboard() {
 
   const allOrders = [...orders, ...emailOrders];
 
+  // Live balance — reflects redemptions made either as a guest or logged in,
+  // since gift cards are tracked by recipient email/code, not by session.
+  // Undelivered (scheduled-for-later) cards are excluded so a surprise gift
+  // doesn't show up on the recipient's dashboard before it's actually sent.
+  const giftCards = await prisma.giftCard.findMany({
+    where: { recipientEmail: user.email, delivered: true },
+    orderBy: [{ balance: 'desc' }, { createdAt: 'desc' }],
+    select: { code: true, balance: true, initialBalance: true, createdAt: true },
+  });
+
   return (
     <div className="min-h-screen bg-stone-50">
       <div className="max-w-4xl mx-auto px-4 sm:px-6 py-12">
@@ -95,6 +106,20 @@ export default async function AccountDashboard() {
             </div>
           </div>
         </div>
+
+        {giftCards.length > 0 && (
+          <div className="bg-white rounded-2xl border border-stone-100 shadow-sm overflow-hidden mb-8">
+            <div className="px-6 py-4 border-b border-stone-100 flex items-center justify-between">
+              <h2 className="font-medium text-stone-900">Gift Cards</h2>
+              <span className="text-sm font-semibold text-amber-700">
+                ${giftCards.reduce((sum, gc) => sum + gc.balance, 0).toFixed(2)} available
+              </span>
+            </div>
+            <GiftCardList
+              giftCards={giftCards.map((gc) => ({ ...gc, createdAt: gc.createdAt.toISOString() }))}
+            />
+          </div>
+        )}
 
         <AddressCard
           profile={{

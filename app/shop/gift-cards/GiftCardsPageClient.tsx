@@ -5,6 +5,7 @@ import { showToast } from "@/components/ui/Toast"
 import { useFormErrors } from "@/lib/hooks/useFormErrors"
 import { useCartStore } from "@/lib/store/cart"
 import { blockInvalidNumberKey } from "@/lib/utils/numberInput"
+import { CheckIcon } from "@phosphor-icons/react"
 import { useState } from "react"
 
 const GIFT_GRADIENT = "linear-gradient(135deg,#1A1208 0%,#3D2010 100%)"
@@ -29,11 +30,18 @@ export function GiftCardsPageClient({
   const [amount, setAmount] = useState("")
   const [recipientEmail, setRecipientEmail] = useState("")
   const [message, setMessage] = useState("")
+  const [deliverOn, setDeliverOn] = useState("")
+
+  const tomorrow = new Date(Date.now() + 24 * 60 * 60 * 1000)
+    .toISOString()
+    .slice(0, 10)
 
   function selectPreset(amt: number) {
     setAmount(String(amt))
     clearError("customAmount")
-    document.getElementById("gift-form")?.scrollIntoView({ behavior: "smooth", block: "center" })
+    document
+      .getElementById("gift-form")
+      ?.scrollIntoView({ behavior: "smooth", block: "center" })
   }
 
   function addGiftCard() {
@@ -53,21 +61,28 @@ export function GiftCardsPageClient({
     }
     setErrors(new Set())
     addItem({
-      key: `gc-${amt}-${recipientEmail}`,
+      key: `gc-${amt}-${recipientEmail}-${deliverOn}`,
       id: `gc-${amt}`,
       type: "gift",
       name: `$${amt} E-Gift Card`,
-      variant: `To: ${recipientEmail}`,
+      variant: deliverOn
+        ? `To: ${recipientEmail} (scheduled ${deliverOn})`
+        : `To: ${recipientEmail}`,
       price: amt,
       gradient: GIFT_GRADIENT,
-      icon: "🎁",
       giftRecipientEmail: recipientEmail,
       giftMessage: message.trim() || undefined,
+      giftDeliverOn: deliverOn || undefined,
     })
-    showToast(`$${amt} gift card for ${recipientEmail} added to cart`)
+    showToast(
+      deliverOn
+        ? `$${amt} gift card scheduled for ${recipientEmail} on ${deliverOn}`
+        : `$${amt} gift card for ${recipientEmail} added to cart`,
+    )
     setAmount("")
     setRecipientEmail("")
     setMessage("")
+    setDeliverOn("")
   }
 
   return (
@@ -93,7 +108,9 @@ export function GiftCardsPageClient({
             <div
               key={amt}
               className={`relative rounded-2xl overflow-hidden cursor-pointer group border shadow-sm hover:shadow-md transition-all duration-300 ${
-                active ? "border-amber-400 ring-2 ring-amber-200" : "border-stone-100 hover:border-stone-200"
+                active
+                  ? "border-amber-400 ring-2 ring-amber-200"
+                  : "border-stone-100 hover:border-stone-200"
               }`}
               onClick={() => selectPreset(amt)}
             >
@@ -110,13 +127,20 @@ export function GiftCardsPageClient({
                 </p>
                 <p className="text-stone-600 text-xs mb-4">E-Gift Card</p>
                 <span
-                  className={`inline-block w-full py-2 text-sm font-medium rounded-full transition-colors ${
+                  className={`inline-flex items-center justify-center gap-1 w-full py-2 text-sm font-medium rounded-full transition-colors ${
                     active
                       ? "bg-amber-700 text-white"
                       : "bg-stone-100 text-stone-600 group-hover:bg-stone-200"
                   }`}
                 >
-                  {active ? "Selected ✓" : "Select"}
+                  {active ? (
+                    <>
+                      <CheckIcon size={14} weight="bold" />
+                      Selected
+                    </>
+                  ) : (
+                    "Select"
+                  )}
                 </span>
               </div>
             </div>
@@ -190,6 +214,23 @@ export function GiftCardsPageClient({
               rows={3}
               className="w-full border border-stone-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-amber-400 transition-colors resize-none"
             />
+          </div>
+
+          <div className="mb-5">
+            <label className="block text-xs font-medium text-stone-600 mb-1">
+              Deliver On
+            </label>
+            <input
+              type="date"
+              value={deliverOn}
+              min={tomorrow}
+              onChange={(e) => setDeliverOn(e.target.value)}
+              className="w-full border border-stone-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-amber-400 transition-colors"
+            />
+            <p className="text-xs text-stone-400 mt-1">
+              Leave blank to send right away, or pick a future date — like a
+              birthday — and we&apos;ll email the code then instead.
+            </p>
           </div>
 
           <Button variant="primary" onClick={addGiftCard}>

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import Stripe from 'stripe';
 import { prisma } from '@/lib/db';
-import { fulfillOrder, CompactOrderItem, GiftPurchaseEntry, GiftRedemptionEntry } from '@/lib/orderFulfillment';
+import { fulfillOrder, updateOrderStatus, CompactOrderItem, GiftPurchaseEntry, GiftRedemptionEntry } from '@/lib/orderFulfillment';
 
 function getStripeClient(): Stripe {
   const key = process.env.STRIPE_SECRET_KEY;
@@ -52,11 +52,24 @@ export async function POST(request: NextRequest) {
       case 'charge.refunded': {
         const charge = event.data.object as Stripe.Charge;
         if (charge.payment_intent) {
-          await prisma.order.updateMany({
+          const order = await prisma.order.findUnique({
             where: { stripePaymentId: charge.payment_intent as string },
-            data: { status: 'refunded' },
+            select: { id: true },
           });
-          console.log(`Order refunded for PaymentIntent ${charge.payment_intent}`);
+          if (order) {
+            // Gift card money never touches Stripe, so a refund only implies
+            // anything about gift card balances once the ENTIRE card-charged
+            // portion has been refunded — a partial refund (e.g. $5 back for
+            // a shipping issue on a $48 order) shouldn't restore/void the
+            // full amount. amount_refunded is cumulative, so this correctly
+            // detects "eventually fully refunded" across multiple partials.
+            const isFullRefund = charge.amount_refunded >= charge.amount;
+            const refundedDollars = charge.amount_refunded / 100;
+            await updateOrderStatus(order.id, isFullRefund ? 'refunded' : 'partially_refunded', refundedDollars);
+            console.log(
+              `Order ${isFullRefund ? 'refunded' : 'partially refunded'} ($${refundedDollars}) for PaymentIntent ${charge.payment_intent}`
+            );
+          }
         }
         break;
       }

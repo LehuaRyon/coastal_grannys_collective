@@ -69,13 +69,33 @@ Open [http://localhost:3000](http://localhost:3000).
 
 ### 7. Set up webhooks for local testing
 
+Stripe can't reach `localhost` directly, so on your own machine it has no way to tell your app "this payment succeeded." The Stripe CLI bridges that gap by forwarding real Stripe events to your local server. Without it running, **payments still go through in Stripe, but nothing happens in the app** — no `Order` row, no gift cards issued, no confirmation emails. That's the #1 cause of "I paid but nothing happened" while developing locally.
+
+**One-time setup:**
+
 ```bash
 brew install stripe/stripe-cli/stripe
 stripe login
+```
+
+**Every time you're testing locally**, run this in its own terminal tab and leave it running for the whole session:
+
+```bash
 stripe listen --forward-to localhost:3000/api/webhooks/stripe
 ```
 
-Copy the `whsec_...` secret printed by the CLI into `.env.local` as `STRIPE_WEBHOOK_SECRET`, then restart the dev server.
+The first time, copy the `whsec_...` secret it prints into `.env.local` as `STRIPE_WEBHOOK_SECRET`, then restart the dev server. (In practice this secret tends to stay the same across runs for a given Stripe account, so you usually won't need to touch it again — but if webhook signature verification ever starts failing, check that it still matches.)
+
+**How to know it's working:** after a test purchase, this terminal should show something like:
+
+```
+--> payment_intent.succeeded
+<-- [200] POST http://localhost:3000/api/webhooks/stripe
+```
+
+If you don't see that `200` line after paying, the webhook never reached your app — check that `stripe listen` is actually running, and that the URL matches `localhost:3000` (or whatever port `npm run dev` is using).
+
+**This is local-only.** Once deployed, Stripe sends webhooks directly to your live HTTPS endpoint — no CLI listener needed. That's configured separately via a registered webhook endpoint in the Stripe Dashboard (see "Register the production webhook" in the Going Live Checklist below).
 
 ### 8. Test a purchase
 
@@ -381,6 +401,10 @@ When you're ready to go live, swap in live Stripe keys in Vercel (not in `.env.l
    - Stripe Dashboard → Settings → Payment methods → Apple Pay → Add a new domain → enter your production domain
    - Stripe hosts a verification file at a well-known URL on your domain automatically — no action needed beyond adding the domain
    - Note: Apple Pay only ever renders in Safari (macOS/iOS/iPadOS) — it's a Safari-only API, not a Stripe or app limitation, so it will never show in Chrome/Firefox/Edge regardless of this step
+9. **Set `CRON_SECRET` in Vercel** — protects `/api/cron/deliver-scheduled-gift-cards` (scheduled gift card delivery, e.g. buy now / send on a birthday). Vercel Cron sends this automatically once set; the schedule lives in `vercel.json` (defaults to 14:00 UTC daily — adjust for your timezone if you want deliveries to land at a specific local time)
+   - **Verify Cron is actually enabled** — it's included on Hobby (limited to daily-or-slower schedules) and Pro plans, but confirm under Vercel Dashboard → your project → Settings → Cron Jobs after your first deploy; it won't error loudly if it's silently not running
+   - `/admin/gift-cards` shows a warning banner if the cron hasn't run in the last ~26 hours, or if any scheduled card is overdue — check there after going live to confirm it's actually firing
+   - If you want an extra layer of certainty beyond that in-app banner, a free external monitor (e.g. cron-job.org, UptimeRobot) hitting the same endpoint with the `CRON_SECRET` header on the same schedule works as a redundant trigger — not required, just extra insurance
 
 ---
 

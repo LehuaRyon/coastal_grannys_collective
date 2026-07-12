@@ -2,9 +2,10 @@
 
 import { Button } from "@/components/ui/Button"
 import { PhoneInput } from "@/components/ui/PhoneInput"
+import { StateSelect } from "@/components/ui/StateSelect"
 import { showToast } from "@/components/ui/Toast"
 import { useFormErrors } from "@/lib/hooks/useFormErrors"
-import { sanitizeZip } from "@/lib/utils/numberInput"
+import { sanitizeZip, sanitizeCity } from "@/lib/utils/numberInput"
 import { signIn } from "next-auth/react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
@@ -259,7 +260,7 @@ export default function RegisterPage() {
                 <input
                   type="text"
                   value={form.city}
-                  onChange={(e) => setForm({ ...form, city: e.target.value })}
+                  onChange={(e) => setForm({ ...form, city: sanitizeCity(e.target.value) })}
                   placeholder="San Francisco"
                   className="w-full border border-stone-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-amber-400 transition-colors"
                   autoComplete="address-level2"
@@ -269,13 +270,10 @@ export default function RegisterPage() {
                 <label className="block text-xs font-medium text-stone-600 mb-1">
                   State
                 </label>
-                <input
-                  type="text"
+                <StateSelect
                   value={form.state}
-                  onChange={(e) => setForm({ ...form, state: e.target.value })}
-                  placeholder="CA"
+                  onChange={(v) => setForm({ ...form, state: v })}
                   className="w-full border border-stone-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-amber-400 transition-colors"
-                  autoComplete="address-level1"
                 />
               </div>
             </div>

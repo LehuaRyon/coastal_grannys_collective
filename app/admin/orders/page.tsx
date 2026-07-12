@@ -74,6 +74,11 @@ export default async function AdminOrdersPage() {
                             −${r.amount.toFixed(2)} gift card ({r.giftCard.code})
                           </span>
                         ))}
+                        {order.refundedAmount != null && (
+                          <span className="block text-[10px] font-normal text-blue-600 mt-0.5">
+                            ${order.refundedAmount.toFixed(2)} refunded
+                          </span>
+                        )}
                       </td>
                       <td className="px-6 py-4">
                         <OrderStatusSelect orderId={order.id} initialStatus={order.status} />

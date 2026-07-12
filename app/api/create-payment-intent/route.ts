@@ -21,6 +21,7 @@ interface CartItemInput {
   qty: number;
   giftRecipientEmail?: string;
   giftMessage?: string;
+  giftDeliverOn?: string;
 }
 
 interface PaymentIntentBody {
@@ -83,7 +84,7 @@ export async function POST(request: NextRequest) {
     for (const code of uniqueCodes) {
       if (remainingProduct <= 0 && remainingShipping <= 0) break;
       const giftCard = await prisma.giftCard.findUnique({ where: { code } });
-      if (!giftCard || giftCard.balance <= 0) continue;
+      if (!giftCard || !giftCard.delivered || giftCard.balance <= 0) continue;
       let balanceLeft = giftCard.balance;
       let used = 0;
       if (remainingProduct > 0) {
@@ -107,8 +108,14 @@ export async function POST(request: NextRequest) {
     // Build compact metadata / order items shared by both branches below
     const compactItems = (items ?? []).map((i) => ({ id: i.id, n: i.name, v: i.variant, p: i.price, q: i.qty }));
     const giftPurchases = (items ?? [])
-      .map((i, idx) => (i.giftRecipientEmail ? { idx, email: i.giftRecipientEmail, msg: i.giftMessage ?? '' } : null))
-      .filter((x): x is { idx: number; email: string; msg: string } => x !== null);
+      .map((i, idx) =>
+        i.giftRecipientEmail
+          ? { idx, email: i.giftRecipientEmail, msg: i.giftMessage ?? '', deliverOn: i.giftDeliverOn }
+          : null
+      )
+      .filter(
+        (x): x is { idx: number; email: string; msg: string; deliverOn: string | undefined } => x !== null
+      );
 
     // Fully covered by gift card balance — skip Stripe entirely rather than
     // force an unchargeable sub-$0.50 card payment.
@@ -123,7 +130,6 @@ export async function POST(request: NextRequest) {
         items: compactItems,
         giftPurchases,
         giftRedemptions: redemptions,
-        sendConfirmationEmail: true,
       });
       return NextResponse.json({ fullyCovered: true, orderId: order.id, amount: 0 });
     }

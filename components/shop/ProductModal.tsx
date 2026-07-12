@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/Button';
 import { useCartStore } from '@/lib/store/cart';
 import { showToast } from '@/components/ui/Toast';
 import type { Coffee } from '@/lib/types';
+import { ROAST_LEVELS } from '@/lib/constants/roast';
 import { CoffeeBeanIcon } from '@phosphor-icons/react';
 
 interface ProductModalProps {
@@ -16,8 +17,6 @@ interface ProductModalProps {
   hasPrev?: boolean;
   hasNext?: boolean;
 }
-
-const ROAST_LEVELS = ['Light', 'Light-Medium', 'Medium', 'Medium-Dark', 'Dark'] as const;
 
 const SIZE_FILL: Record<string, number> = {
   '8 oz / ½ lb':  50,

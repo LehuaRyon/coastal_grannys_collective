@@ -83,7 +83,11 @@ model Order {
   stripePaymentId String      @unique
   amount          Float
   currency        String      @default("usd")
-  status          String      @default("paid") // paid | refunded | disputed
+  status          String      @default("paid") // paid | partially_refunded | refunded | disputed
+  // Cumulative dollars actually refunded via Stripe so far (mirrors the
+  // charge's amount_refunded) — only a full refund of the card-charged
+  // portion triggers gift card reconciliation; see updateOrderStatus.
+  refundedAmount  Float?
   customerEmail   String?
   customerName    String?
   shippingAddress Json?
@@ -118,10 +122,25 @@ model GiftCard {
   purchaseOrderId String?
   purchaseOrder   Order?               @relation("GiftCardPurchase", fields: [purchaseOrderId], references: [id], onDelete: SetNull)
   redemptions     GiftCardRedemption[]
+  auditLog        GiftCardAuditLog[]
   createdAt       DateTime             @default(now())
   updatedAt       DateTime             @updatedAt
 
+  // Delivery — every card is created with delivered:false and only flips to
+  // true once the email actually sends successfully (immediate or via the
+  // scheduled-delivery cron), so "delivered" always reflects a real send,
+  // not just that the card was created. `deliverOn` doubles as the retry
+  // gate: immediate cards default it to "now" so a failed send is picked up
+  // and retried by the same daily cron that handles genuinely scheduled
+  // (e.g. birthday) deliveries — one retry mechanism for both cases.
+  // Undelivered cards are invisible everywhere (dashboard, validate,
+  // redemption) until delivered flips true, so a surprise gift isn't
+  // spoiled early and an un-sent code can't be guessed and redeemed blind.
+  deliverOn DateTime?
+  delivered Boolean   @default(false)
+
   @@index([recipientEmail])
+  @@index([delivered, deliverOn])
 }
 
 // Join row — one order can redeem multiple gift cards, and one gift card can
@@ -139,10 +158,38 @@ model GiftCardRedemption {
   @@index([giftCardId])
 }
 
+// One row per run of the scheduled-gift-card-delivery cron job — lets the
+// admin gift cards page show "last ran at X" so a silently-disabled or
+// misconfigured Vercel Cron is visible instead of failing invisibly.
+model CronRun {
+  id      String   @id @default(cuid())
+  job     String
+  ranAt   DateTime @default(now())
+  checked Int
+  sent    Int
+
+  @@index([job, ranAt])
+}
+
+// Durable, queryable record of admin actions on gift cards — issue, credit,
+// resend — so "who issued this $500 card and why" is a query, not a log grep.
+model GiftCardAuditLog {
+  id         String   @id @default(cuid())
+  giftCardId String
+  giftCard   GiftCard @relation(fields: [giftCardId], references: [id], onDelete: Cascade)
+  action     String   // issue | credit | resend
+  amount     Float?
+  reason     String?
+  adminEmail String
+  createdAt  DateTime @default(now())
+
+  @@index([giftCardId])
+}
+
 model OrderItem {
-  id                 String  @id @default(cuid())
+  id                 String    @id @default(cuid())
   orderId            String
-  order              Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  order              Order     @relation(fields: [orderId], references: [id], onDelete: Cascade)
   productId          String
   name               String
   variant            String
@@ -150,6 +197,7 @@ model OrderItem {
   qty                Int
   giftRecipientEmail String?
   giftMessage        String?
+  giftDeliverOn      DateTime?
 }
 
 // ─── Products ────────────────────────────────────────────────

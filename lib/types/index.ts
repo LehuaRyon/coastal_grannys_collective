@@ -56,12 +56,12 @@ export interface CartItem {
   variant: string;
   price: number;
   gradient: string;
-  icon?: string;
   slug?: string;
   hasImage?: boolean;
   hasFrontBack?: boolean;
   giftRecipientEmail?: string;
   giftMessage?: string;
+  giftDeliverOn?: string;
   qty: number;
 }
 

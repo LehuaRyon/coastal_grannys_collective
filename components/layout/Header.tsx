@@ -167,25 +167,6 @@ export function Header() {
                 />
               </Link>
             ))}
-
-            {/* Admin link — only visible to admins */}
-            {session?.user?.role === 'admin' && (
-              <Link
-                href="/admin"
-                className={`group relative px-4 py-2 rounded-full text-sm font-medium transition-colors ${
-                  pathname.startsWith('/admin')
-                    ? 'text-amber-700'
-                    : 'text-stone-700 hover:text-stone-900'
-                }`}
-              >
-                Admin
-                <span
-                  className={`absolute left-4 right-4 -bottom-0.5 h-0.5 bg-amber-700 rounded-full origin-left transition-transform duration-300 ${
-                    pathname.startsWith('/admin') ? 'scale-x-100' : 'scale-x-0 group-hover:scale-x-100'
-                  }`}
-                />
-              </Link>
-            )}
           </nav>
 
           {/* Right actions */}
@@ -206,7 +187,12 @@ export function Header() {
 
             {/* User menu — logged in */}
             {session ? (
-              <div ref={userRef} className="relative hidden sm:block">
+              <div
+                ref={userRef}
+                className="relative hidden sm:block"
+                onMouseEnter={() => setUserOpen(true)}
+                onMouseLeave={() => setUserOpen(false)}
+              >
                 <button
                   onClick={() => setUserOpen((p) => !p)}
                   className="flex items-center gap-2 px-3 py-1.5 rounded-full border border-stone-200 hover:bg-stone-50 transition-colors"
@@ -219,33 +205,35 @@ export function Header() {
                 </button>
 
                 {userOpen && (
-                  <div className="absolute top-full right-0 mt-1 w-48 bg-white rounded-xl shadow-xl border border-stone-100 py-1 z-50">
-                    <div className="px-4 py-2.5 border-b border-stone-100">
-                      <p className="text-xs font-semibold text-stone-900">
-                        {session.user.firstName} {session.user.lastName}
-                      </p>
-                      <p className="text-xs text-stone-400 truncate">{session.user.email}</p>
-                    </div>
-                    <Link
-                      href="/account/dashboard"
-                      className="block px-4 py-2.5 text-sm text-stone-700 hover:bg-stone-50 transition-colors"
-                    >
-                      My Account
-                    </Link>
-                    {session.user.role === 'admin' && (
+                  <div className="absolute top-full right-0 pt-1 w-48 z-50">
+                    <div className="bg-white rounded-xl shadow-xl border border-stone-100 py-1">
+                      <div className="px-4 py-2.5 border-b border-stone-100">
+                        <p className="text-xs font-semibold text-stone-900">
+                          {session.user.firstName} {session.user.lastName}
+                        </p>
+                        <p className="text-xs text-stone-400 truncate">{session.user.email}</p>
+                      </div>
                       <Link
-                        href="/admin"
+                        href="/account/dashboard"
                         className="block px-4 py-2.5 text-sm text-stone-700 hover:bg-stone-50 transition-colors"
                       >
-                        Admin Dashboard
+                        My Account
                       </Link>
-                    )}
-                    <button
-                      onClick={() => signOut({ callbackUrl: '/shop/coffee' })}
-                      className="w-full text-left px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 transition-colors"
-                    >
-                      Sign Out
-                    </button>
+                      {session.user.role === 'admin' && (
+                        <Link
+                          href="/admin"
+                          className="block px-4 py-2.5 text-sm text-stone-700 hover:bg-stone-50 transition-colors"
+                        >
+                          Admin Dashboard
+                        </Link>
+                      )}
+                      <button
+                        onClick={() => signOut({ callbackUrl: '/shop/coffee' })}
+                        className="w-full text-left px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 transition-colors"
+                      >
+                        Sign Out
+                      </button>
+                    </div>
                   </div>
                 )}
               </div>

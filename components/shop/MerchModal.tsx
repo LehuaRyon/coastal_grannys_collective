@@ -47,7 +47,6 @@ export function MerchModal({ product: m, onClose, onPrev, onNext, hasPrev, hasNe
       variant,
       price: m.price,
       gradient: m.gradient,
-      icon: m.icon,
       slug: m.slug,
       hasImage: m.hasImage,
       hasFrontBack: m.hasFrontBack,

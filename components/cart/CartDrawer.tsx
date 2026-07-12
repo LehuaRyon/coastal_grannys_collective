@@ -58,7 +58,10 @@ export function CartDrawer() {
   useEffect(() => setMounted(true), []);
 
   const subtotal = total();
-  const shipping = subtotal >= FREE_SHIPPING_THRESHOLD ? 0 : 8;
+  // Gift cards are delivered by email — nothing to ship, so no shipping fee
+  // applies to a cart that's gift cards only.
+  const isGiftCardOnlyCart = items.length > 0 && items.every((i) => i.type === 'gift');
+  const shipping = isGiftCardOnlyCart ? 0 : subtotal >= FREE_SHIPPING_THRESHOLD ? 0 : 8;
   const grandTotal = subtotal + shipping;
   const cartCount = count();
 
@@ -126,19 +129,23 @@ export function CartDrawer() {
                     <p className="text-sm font-medium text-stone-900 truncate">{item.name}</p>
                     <p className="text-xs text-stone-400 mb-1.5">{item.variant}</p>
                     <div className="flex items-center gap-2">
-                      <button
-                        onClick={() => updateQty(item.key, -1)}
-                        className="w-6 h-6 flex items-center justify-center rounded-full border border-stone-200 hover:border-stone-400 text-stone-600 text-xs transition-colors"
-                      >
-                        −
-                      </button>
-                      <span className="text-sm w-5 text-center">{item.qty}</span>
-                      <button
-                        onClick={() => updateQty(item.key, 1)}
-                        className="w-6 h-6 flex items-center justify-center rounded-full border border-stone-200 hover:border-stone-400 text-stone-600 text-xs transition-colors"
-                      >
-                        +
-                      </button>
+                      {item.type !== 'gift' && (
+                        <>
+                          <button
+                            onClick={() => updateQty(item.key, -1)}
+                            className="w-6 h-6 flex items-center justify-center rounded-full border border-stone-200 hover:border-stone-400 text-stone-600 text-xs transition-colors"
+                          >
+                            −
+                          </button>
+                          <span className="text-sm w-5 text-center">{item.qty}</span>
+                          <button
+                            onClick={() => updateQty(item.key, 1)}
+                            className="w-6 h-6 flex items-center justify-center rounded-full border border-stone-200 hover:border-stone-400 text-stone-600 text-xs transition-colors"
+                          >
+                            +
+                          </button>
+                        </>
+                      )}
                       <button
                         onClick={() => removeItem(item.key)}
                         className="ml-1 text-xs text-stone-400 hover:text-red-500 transition-colors"
@@ -174,7 +181,7 @@ export function CartDrawer() {
               </div>
             </div>
 
-            {subtotal < FREE_SHIPPING_THRESHOLD ? (
+            {isGiftCardOnlyCart ? null : subtotal < FREE_SHIPPING_THRESHOLD ? (
               <p className="text-xs text-stone-500 text-center">
                 Add ${(FREE_SHIPPING_THRESHOLD - subtotal).toFixed(2)} more for free shipping
               </p>

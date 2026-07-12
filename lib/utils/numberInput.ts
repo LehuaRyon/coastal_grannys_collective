@@ -15,3 +15,11 @@ export function blockInvalidNumberKey(e: KeyboardEvent<HTMLInputElement>, allowD
 export function sanitizeZip(value: string): string {
   return value.replace(/[^0-9]/g, '').slice(0, 5);
 }
+
+// City names are letters only ("St. Louis") — strips digits on every change
+// so the field can never end up with a number in it. (State is now a
+// dropdown of fixed options — see components/ui/StateSelect — so it never
+// needed this kind of sanitizing.)
+export function sanitizeCity(value: string): string {
+  return value.replace(/[0-9]/g, '');
+}

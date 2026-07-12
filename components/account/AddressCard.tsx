@@ -4,7 +4,8 @@ import { useState } from 'react';
 import { showToast } from '@/components/ui/Toast';
 import { Button } from '@/components/ui/Button';
 import { PhoneInput } from '@/components/ui/PhoneInput';
-import { sanitizeZip } from '@/lib/utils/numberInput';
+import { StateSelect } from '@/components/ui/StateSelect';
+import { sanitizeZip, sanitizeCity } from '@/lib/utils/numberInput';
 
 interface ProfileFields {
   phone: string | null;
@@ -142,18 +143,16 @@ export function AddressCard({ profile }: { profile: ProfileFields }) {
               <input
                 type="text"
                 value={form.city}
-                onChange={(e) => setForm({ ...form, city: e.target.value })}
+                onChange={(e) => setForm({ ...form, city: sanitizeCity(e.target.value) })}
                 placeholder="San Francisco"
                 className={inputClass}
               />
             </div>
             <div>
               <label className="block text-xs font-medium text-stone-600 mb-1">State</label>
-              <input
-                type="text"
+              <StateSelect
                 value={form.state}
-                onChange={(e) => setForm({ ...form, state: e.target.value })}
-                placeholder="CA"
+                onChange={(v) => setForm({ ...form, state: v })}
                 className={inputClass}
               />
             </div>

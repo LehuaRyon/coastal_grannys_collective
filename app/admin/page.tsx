@@ -1,19 +1,21 @@
 import Link from 'next/link';
 import { prisma } from '@/lib/db';
-import { PackageIcon, NotePencilIcon, ReceiptIcon, TrayIcon, UsersIcon } from '@phosphor-icons/react/dist/ssr';
+import { PackageIcon, NotePencilIcon, ReceiptIcon, TrayIcon, UsersIcon, GiftIcon } from '@phosphor-icons/react/dist/ssr';
 import { CountUpStat } from '@/components/ui/CountUpStat';
 
 export default async function AdminDashboard() {
-  const [totalOrders, revenueResult, recentOrders, totalUsers, totalProducts, unreadSubmissions] = await Promise.all([
+  const [totalOrders, revenueResult, recentOrders, totalUsers, totalProducts, unreadSubmissions, giftCardBalanceResult] = await Promise.all([
     prisma.order.count(),
     prisma.order.aggregate({ _sum: { amount: true }, where: { status: 'paid' } }),
     prisma.order.findMany({ orderBy: { createdAt: 'desc' }, take: 5, include: { items: true } }),
     prisma.user.count(),
     prisma.product.count({ where: { inStock: true } }),
     prisma.submission.count({ where: { read: false } }),
+    prisma.giftCard.aggregate({ _sum: { balance: true }, where: { balance: { gt: 0 } } }),
   ]);
 
   const totalRevenue = revenueResult._sum.amount ?? 0;
+  const outstandingGiftCardBalance = giftCardBalanceResult._sum.balance ?? 0;
 
   const statusColors: Record<string, string> = {
     paid: 'bg-green-100 text-green-700',
@@ -26,6 +28,7 @@ export default async function AdminDashboard() {
     { label: 'Manage Products', desc: 'Add, edit, or remove coffees, subscriptions & merch', href: '/admin/products', icon: PackageIcon },
     { label: 'Edit Content', desc: 'Update homepage, about page & contact details', href: '/admin/content', icon: NotePencilIcon },
     { label: 'View Orders', desc: 'Full order history with customer details', href: '/admin/orders', icon: ReceiptIcon },
+    { label: 'Gift Cards', desc: 'Issue, credit, resend & audit e-gift cards', href: '/admin/gift-cards', icon: GiftIcon },
     { label: 'Submissions', desc: 'Contact, wholesale & coffee cart inquiries', href: '/admin/submissions', icon: TrayIcon },
     { label: 'Manage Users', desc: 'Customer list and admin role management', href: '/admin/users', icon: UsersIcon },
   ];
@@ -38,14 +41,15 @@ export default async function AdminDashboard() {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-2 lg:grid-cols-6 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-7 gap-4">
         {[
+          { label: 'Products', value: totalProducts },
           { label: 'Total Orders', value: totalOrders },
           { label: 'Revenue', value: totalRevenue, prefix: '$', decimals: 2 },
-          { label: 'Users', value: totalUsers },
           { label: 'Avg Order', value: totalOrders > 0 ? totalRevenue / totalOrders : 0, prefix: '$', decimals: 2 },
-          { label: 'Products', value: totalProducts },
+          { label: 'Gift Card Balance', value: outstandingGiftCardBalance, prefix: '$', decimals: 2 },
           { label: 'Unread Msgs', value: unreadSubmissions },
+          { label: 'Users', value: totalUsers },
         ].map((stat) => (
           <div key={stat.label} className="bg-white rounded-xl border border-stone-100 p-5">
             <p className="text-xs text-stone-500 font-medium">{stat.label}</p>

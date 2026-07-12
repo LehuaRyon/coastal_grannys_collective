@@ -3,12 +3,13 @@
 import { Button } from "@/components/ui/Button"
 import { Modal } from "@/components/ui/Modal"
 import { PhoneInput } from "@/components/ui/PhoneInput"
+import { StateSelect } from "@/components/ui/StateSelect"
 import { showToast } from "@/components/ui/Toast"
 import { useFormErrors } from "@/lib/hooks/useFormErrors"
 import { sortCartItems, useCartStore } from "@/lib/store/cart"
-import { sanitizeZip } from "@/lib/utils/numberInput"
+import { sanitizeZip, sanitizeCity } from "@/lib/utils/numberInput"
 import { getStripe } from "@/lib/stripe"
-import { CheckCircleIcon } from "@phosphor-icons/react"
+import { CheckCircleIcon, CheckIcon } from "@phosphor-icons/react"
 import { Elements } from "@stripe/react-stripe-js"
 import { useSession } from "next-auth/react"
 import { useEffect, useState } from "react"
@@ -37,8 +38,6 @@ interface CheckoutModalProps {
   isOpen: boolean
   onClose: () => void
 }
-
-const STEPS = ["Contact", "Shipping", "Payment"] as const
 
 export function CheckoutModal({ isOpen, onClose }: CheckoutModalProps) {
   const { data: session } = useSession()
@@ -78,9 +77,24 @@ export function CheckoutModal({ isOpen, onClose }: CheckoutModalProps) {
   const [giftCardChecking, setGiftCardChecking] = useState(false)
   const [finalChargeAmount, setFinalChargeAmount] = useState<number | null>(null)
   const [fullyCoveredByGiftCard, setFullyCoveredByGiftCard] = useState(false)
+  const [giftRecipientsSent, setGiftRecipientsSent] = useState<string[]>([])
+  const [giftRecipientsScheduled, setGiftRecipientsScheduled] = useState<{ email: string; date: string }[]>([])
+  const [wasGiftCardOnlyOrder, setWasGiftCardOnlyOrder] = useState(false)
+  // When the order will be fully covered by gift card balance, wait for an
+  // explicit "Place Order" click before actually finalizing it — otherwise
+  // there's no payment button at all and the order would place itself the
+  // instant step 3 loads.
+  const [giftOrderConfirmed, setGiftOrderConfirmed] = useState(false)
+
+  // Gift cards are delivered by email — nothing to ship, so no shipping fee
+  // and no Shipping step when the cart is gift cards only.
+  const isGiftCardOnlyCart = items.length > 0 && items.every((i) => i.type === "gift")
+  const STEPS: { label: string; value: 1 | 2 | 3 }[] = isGiftCardOnlyCart
+    ? [{ label: "Contact", value: 1 }, { label: "Payment", value: 3 }]
+    : [{ label: "Contact", value: 1 }, { label: "Shipping", value: 2 }, { label: "Payment", value: 3 }]
 
   const subtotal = total()
-  const shippingCost = subtotal >= 60 ? 0 : 8
+  const shippingCost = isGiftCardOnlyCart ? 0 : subtotal >= 60 ? 0 : 8
   const eligibleSubtotal = items
     .filter((i) => i.type === "coffee" || i.type === "merch")
     .reduce((sum, i) => sum + i.price * i.qty, 0)
@@ -115,6 +129,11 @@ export function CheckoutModal({ isOpen, onClose }: CheckoutModalProps) {
   })()
   const giftCardDiscount = giftCardAllocations.reduce((sum, a) => sum + a.amount, 0)
   const grandTotal = Math.max(0, subtotal + shippingCost - giftCardDiscount)
+  // Mirrors the server's STRIPE_MIN_CHARGE threshold — predicts whether this
+  // order will be fully covered by gift card balance (no card charge at
+  // all), so we can hold off on actually placing it until the user presses
+  // a button, instead of silently finalizing the moment step 3 loads.
+  const isLikelyFullyCovered = appliedGiftCards.length > 0 && grandTotal < 0.5
 
   async function applyGiftCard() {
     const code = giftCodeInput.trim().toUpperCase()
@@ -195,9 +214,14 @@ export function CheckoutModal({ isOpen, onClose }: CheckoutModalProps) {
       .catch(() => {})
   }, [isOpen, session])
 
-  // Create a PaymentIntent when the user reaches step 3
+  // Create a PaymentIntent when the user reaches step 3 — but if the order
+  // will be fully covered by gift card balance, hold off until the user
+  // explicitly clicks "Place Order" instead of finalizing it automatically
+  // the instant this step loads (there'd otherwise be no button to press
+  // and no chance to back out before it's placed).
   useEffect(() => {
     if (step !== 3 || clientSecret) return
+    if (isLikelyFullyCovered && !giftOrderConfirmed) return
 
     const stripeKey = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY
     if (!stripeKey) {
@@ -222,7 +246,7 @@ export function CheckoutModal({ isOpen, onClose }: CheckoutModalProps) {
         giftCardCodes: appliedGiftCards.map((gc) => gc.code),
         customerEmail: contact.email,
         customerName: `${contact.firstName} ${contact.lastName}`.trim(),
-        shippingAddress: shipping,
+        shippingAddress: isGiftCardOnlyCart ? null : shipping,
         items: items.map((i) => ({
           key: i.key,
           id: i.id,
@@ -233,6 +257,7 @@ export function CheckoutModal({ isOpen, onClose }: CheckoutModalProps) {
           qty: i.qty,
           giftRecipientEmail: i.giftRecipientEmail,
           giftMessage: i.giftMessage,
+          giftDeliverOn: i.giftDeliverOn,
         })),
       }),
     })
@@ -243,6 +268,7 @@ export function CheckoutModal({ isOpen, onClose }: CheckoutModalProps) {
           // Gift card balance covered the whole order — nothing to charge,
           // so there's no Stripe payment step at all.
           setFullyCoveredByGiftCard(true)
+          collectGiftRecipients()
           clearCart()
           setStep("confirmed")
           return
@@ -254,7 +280,7 @@ export function CheckoutModal({ isOpen, onClose }: CheckoutModalProps) {
         setPaymentError(err.message)
       })
       .finally(() => setLoadingIntent(false))
-  }, [step, clientSecret, subtotal, shippingCost, appliedGiftCards, clearCart])
+  }, [step, clientSecret, subtotal, shippingCost, appliedGiftCards, clearCart, isLikelyFullyCovered, giftOrderConfirmed])
 
   // Confetti burst on order confirmation — brand colors, skipped for
   // prefers-reduced-motion since it's a purely celebratory flourish.
@@ -295,10 +321,26 @@ export function CheckoutModal({ isOpen, onClose }: CheckoutModalProps) {
       setGiftCardError(null)
       setFinalChargeAmount(null)
       setFullyCoveredByGiftCard(false)
+      setGiftRecipientsSent([])
+      setGiftRecipientsScheduled([])
+      setWasGiftCardOnlyOrder(false)
+      setGiftOrderConfirmed(false)
     }, 300)
   }
 
+  function collectGiftRecipients() {
+    const giftItems = items.filter((i) => i.type === "gift" && i.giftRecipientEmail)
+    const immediate = giftItems.filter((i) => !i.giftDeliverOn)
+    const scheduled = giftItems.filter((i) => i.giftDeliverOn)
+    setGiftRecipientsSent(Array.from(new Set(immediate.map((i) => i.giftRecipientEmail!))))
+    setGiftRecipientsScheduled(
+      scheduled.map((i) => ({ email: i.giftRecipientEmail!, date: i.giftDeliverOn! }))
+    )
+    setWasGiftCardOnlyOrder(isGiftCardOnlyCart)
+  }
+
   function handlePaymentSuccess() {
+    collectGiftRecipients()
     clearCart()
     setStep("confirmed")
   }
@@ -306,6 +348,7 @@ export function CheckoutModal({ isOpen, onClose }: CheckoutModalProps) {
   function goToStep3() {
     // Reset clientSecret so a fresh PaymentIntent is created with the latest total
     setClientSecret(null)
+    setGiftOrderConfirmed(false)
     setStep(3)
   }
 
@@ -394,12 +437,12 @@ export function CheckoutModal({ isOpen, onClose }: CheckoutModalProps) {
 
   const StepIndicator = () => (
     <div className="flex items-center gap-2 mb-8">
-      {STEPS.map((label, i) => {
+      {STEPS.map((s, i) => {
         const num = i + 1
-        const isActive = step === num
-        const isDone = typeof step === "number" && step > num
+        const isActive = step === s.value
+        const isDone = typeof step === "number" && step > s.value
         return (
-          <div key={label} className="flex items-center gap-2">
+          <div key={s.label} className="flex items-center gap-2">
             <div className="flex items-center gap-1.5">
               <div
                 className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-semibold transition-all ${
@@ -410,12 +453,12 @@ export function CheckoutModal({ isOpen, onClose }: CheckoutModalProps) {
                       : "bg-stone-100 text-stone-400"
                 }`}
               >
-                {isDone ? "✓" : num}
+                {isDone ? <CheckIcon size={12} weight="bold" /> : num}
               </div>
               <span
                 className={`text-xs font-medium ${isActive ? "text-stone-900" : "text-stone-400"}`}
               >
-                {label}
+                {s.label}
               </span>
             </div>
             {i < STEPS.length - 1 && <div className="w-6 h-px bg-stone-200" />}
@@ -440,13 +483,24 @@ export function CheckoutModal({ isOpen, onClose }: CheckoutModalProps) {
               Order Confirmed!
             </h2>
             <p className="text-stone-500 text-sm mb-4 leading-relaxed">
-              Thank you! Your freshly roasted coffee is being prepared and will
-              ship within 1–2 business days.
+              {wasGiftCardOnlyOrder
+                ? "Thank you! Your gift card is delivered by email — nothing to ship."
+                : "Thank you! Your freshly roasted coffee is being prepared and will ship within 1–2 business days."}
             </p>
-            <p className="text-xs text-stone-400 mb-8">
+            <p className="text-xs text-stone-400 mb-2">
               {fullyCoveredByGiftCard
                 ? "This order was fully covered by gift card balance — a confirmation has been sent to your email."
                 : "A receipt has been sent to your email by Stripe."}
+            </p>
+            <p className="text-xs text-stone-400 mb-8">
+              {giftRecipientsSent.length > 0 && `We've sent a gift card to ${giftRecipientsSent.join(", ")}. `}
+              {giftRecipientsScheduled.length > 0 &&
+                giftRecipientsScheduled
+                  .map(
+                    (g) =>
+                      `Your gift card for ${g.email} will be sent on ${new Date(g.date).toLocaleDateString()}.`
+                  )
+                  .join(" ")}
             </p>
             <Button variant="primary" onClick={handleClose}>
               Continue Shopping
@@ -538,7 +592,11 @@ export function CheckoutModal({ isOpen, onClose }: CheckoutModalProps) {
                         return
                       }
                       setErrors(new Set())
-                      setStep(2)
+                      if (isGiftCardOnlyCart) {
+                        goToStep3()
+                      } else {
+                        setStep(2)
+                      }
                     }}
                   >
                     Continue →
@@ -589,7 +647,7 @@ export function CheckoutModal({ isOpen, onClose }: CheckoutModalProps) {
                       type="text"
                       value={shipping.city}
                       onChange={(e) => {
-                        setShipping({ ...shipping, city: e.target.value })
+                        setShipping({ ...shipping, city: sanitizeCity(e.target.value) })
                         clearError("city")
                       }}
                       placeholder="San Francisco"
@@ -600,14 +658,12 @@ export function CheckoutModal({ isOpen, onClose }: CheckoutModalProps) {
                     <label className="block text-xs font-medium text-stone-600 mb-1">
                       State *
                     </label>
-                    <input
-                      type="text"
+                    <StateSelect
                       value={shipping.state}
-                      onChange={(e) => {
-                        setShipping({ ...shipping, state: e.target.value })
+                      onChange={(v) => {
+                        setShipping({ ...shipping, state: v })
                         clearError("state")
                       }}
-                      placeholder="CA"
                       className={`w-full border ${borderClass("state")} rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-amber-400 transition-colors`}
                     />
                   </div>
@@ -677,70 +733,107 @@ export function CheckoutModal({ isOpen, onClose }: CheckoutModalProps) {
               <div className="min-h-[600px] flex flex-col">
                 <OrderSummary />
 
-                {paymentError && (
-                  <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-5 text-sm text-amber-800">
-                    <strong>Stripe not configured:</strong> {paymentError}
-                  </div>
-                )}
+                {isLikelyFullyCovered && !giftOrderConfirmed ? (
+                  <>
+                    <div className="flex-1 flex flex-col items-center justify-center text-center gap-3">
+                      <CheckCircleIcon size={40} weight="duotone" color="#CC9818" />
+                      <div>
+                        <p className="text-sm font-medium text-stone-800 mb-1">
+                          Your gift card balance covers this order in full.
+                        </p>
+                        <p className="text-xs text-stone-500">
+                          Nothing will be charged to a card.
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex gap-3 pt-2 mt-auto">
+                      <Button
+                        variant="ghost"
+                        className="flex-shrink-0"
+                        onClick={() => setStep(isGiftCardOnlyCart ? 1 : 2)}
+                        disabled={loadingIntent}
+                      >
+                        ← Back
+                      </Button>
+                      <Button
+                        variant="primary"
+                        full
+                        className="flex-1"
+                        onClick={() => setGiftOrderConfirmed(true)}
+                        disabled={loadingIntent}
+                      >
+                        {loadingIntent ? "Placing Order…" : "Place Order →"}
+                      </Button>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    {paymentError && (
+                      <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-5 text-sm text-amber-800">
+                        <strong>Stripe not configured:</strong> {paymentError}
+                      </div>
+                    )}
 
-                {loadingIntent && (
-                  <div className="flex items-center justify-center py-12 text-stone-400 gap-3">
-                    <svg
-                      className="animate-spin w-5 h-5"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                    >
-                      <circle
-                        className="opacity-25"
-                        cx="12"
-                        cy="12"
-                        r="10"
-                        stroke="currentColor"
-                        strokeWidth="4"
-                      />
-                      <path
-                        className="opacity-75"
-                        fill="currentColor"
-                        d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"
-                      />
-                    </svg>
-                    <span className="text-sm">Preparing payment…</span>
-                  </div>
-                )}
+                    {loadingIntent && (
+                      <div className="flex items-center justify-center py-12 text-stone-400 gap-3">
+                        <svg
+                          className="animate-spin w-5 h-5"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                        >
+                          <circle
+                            className="opacity-25"
+                            cx="12"
+                            cy="12"
+                            r="10"
+                            stroke="currentColor"
+                            strokeWidth="4"
+                          />
+                          <path
+                            className="opacity-75"
+                            fill="currentColor"
+                            d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"
+                          />
+                        </svg>
+                        <span className="text-sm">Preparing payment…</span>
+                      </div>
+                    )}
 
-                {clientSecret && !loadingIntent && (
-                  <Elements
-                    stripe={getStripe()}
-                    options={{
-                      clientSecret,
-                      appearance: {
-                        theme: "stripe",
-                        variables: {
-                          colorPrimary: "#92400e",
-                          colorBackground: "#ffffff",
-                          borderRadius: "8px",
-                          fontFamily: "Inter, system-ui, sans-serif",
-                        },
-                      },
-                    }}
-                  >
-                    <StripePaymentForm
-                      total={finalChargeAmount ?? grandTotal}
-                      onSuccess={handlePaymentSuccess}
-                      onBack={() => setStep(2)}
-                    />
-                  </Elements>
-                )}
+                    {clientSecret && !loadingIntent && (
+                      <Elements
+                        stripe={getStripe()}
+                        options={{
+                          clientSecret,
+                          appearance: {
+                            theme: "stripe",
+                            variables: {
+                              colorPrimary: "#92400e",
+                              colorBackground: "#ffffff",
+                              borderRadius: "8px",
+                              fontFamily: "Inter, system-ui, sans-serif",
+                            },
+                          },
+                        }}
+                      >
+                        <StripePaymentForm
+                          total={finalChargeAmount ?? grandTotal}
+                          onSuccess={handlePaymentSuccess}
+                          onBack={() => setStep(isGiftCardOnlyCart ? 1 : 2)}
+                        />
+                      </Elements>
+                    )}
 
-                {/* Fallback back button if Stripe fails to load */}
-                {paymentError && (
-                  <Button
-                    variant="ghost"
-                    className="mt-4"
-                    onClick={() => setStep(2)}
-                  >
-                    ← Back
-                  </Button>
+                    {/* Fallback back button if Stripe fails to load */}
+                    {paymentError && (
+                      <Button
+                        variant="ghost"
+                        className="mt-4"
+                        onClick={() => setStep(isGiftCardOnlyCart ? 1 : 2)}
+                      >
+                        ← Back
+                      </Button>
+                    )}
+                  </>
                 )}
               </div>
             )}
