@@ -484,6 +484,14 @@ git push -u origin dev
 
 `.github/workflows/deploy-dev-on-label.yml` — adding the **`deploy-dev`** label to a PR (or pushing new commits while it's already applied) builds and deploys that PR's actual branch/commit as a Preview, then points `dev.coastalgrannys.com` at it. This replaced an earlier approach that used a persistent `dev` git branch — that branch has been deleted; nothing needs to be kept "in sync" with `main` anymore, since the dev environment's content is now just whichever PR was last labeled, not a real branch. Closing/merging the PR or removing the label does nothing further on purpose — the domain keeps serving the last deployment until another PR claims it, rather than resetting to some default state.
 
+**How it works, end to end:** open a PR against `main` → add the `deploy-dev` label (or push new commits while it's already applied) → that PR's exact branch gets built and deployed, and `dev.coastalgrannys.com` points at it. Merging or removing the label does nothing extra — it just sits on the last deployment until another PR claims it.
+
+**Getting a shareable link for a `deploy-dev` build:** the plain `dev.coastalgrannys.com` URL is still behind Deployment Protection (see below) regardless of which PR it's currently serving, so a link for people without a Vercel login still has to come from the deployment's own **Share** button, same manual process as before — this workflow doesn't currently automate that part:
+1. Vercel dashboard → project → **Deployments** → open the deployment the Action just created (the workflow's PR comment links straight to `dev.coastalgrannys.com`, but the Action run logs / Deployments tab has the actual deployment page)
+2. **Share** → change the dropdown to **"Anyone with the link"** → **Copy Link**
+
+Not yet confirmed whether a previously-generated share token keeps working once the domain gets re-aliased to a *new* deployment (i.e. after the next PR/push claims `dev.coastalgrannys.com`) — worth checking empirically the next time this happens, since it determines whether a link needs regenerating per deploy or can be reused across a testing session.
+
 Requires three repository secrets (Settings → Secrets and variables → Actions, already set as of 2026-07-18): `VERCEL_TOKEN` (a dedicated token from https://vercel.com/account/tokens — the CLI session used for everything else in this doc is authenticated via a scoped plugin integration that can't mint new tokens itself, so this one has to be created manually), `VERCEL_ORG_ID` (`team_YvNfQhQsyoyzD4qgK6VEzZQU`), `VERCEL_PROJECT_ID` (`prj_oXOMYkESfxLZexOn1H3kHuRyevK7`). These are CI-only — the app itself never reads any of them, so they don't belong in `.env.local`.
 
 **Production is intentionally gated right now** via Settings → Build and Deployment → **Ignored Build Step**:
