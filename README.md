@@ -504,7 +504,7 @@ These don't block launch but directly affect how much money the site makes.
 | #   | Task                                                                                                                                                 | Where                                                               |
 | --- | ---------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------- |
 | 7   | ✅ **Swap Stripe subscriptions to recurring billing** — done; real Stripe Subscriptions API billing, full self-service + admin management — see "Subscriptions" section above | `lib/subscriptions.ts`, `app/admin/subscriptions/`                  |
-| 8   | **Gift card email delivery** — currently adds to cart and records the order but never emails the recipient a code or balance                         | Need email service + gift card redemption logic                     |
+| 8   | ✅ **Gift card email delivery** — done; recipient is emailed on real-time purchase, on scheduled/future delivery (cron), and admin resend, with balance and code                        | `lib/email.ts` (`sendGiftCardEmail`), `lib/orderFulfillment.ts`, `app/api/cron/deliver-scheduled-gift-cards`  |
 | 9   | **"Your order has shipped" email** — admin marks order shipped, customer gets a notification                                                         | Admin orders page + email service                                   |
 
 ### Phase 3 — Admin Quality-of-Life
@@ -512,9 +512,10 @@ These don't block launch but directly affect how much money the site makes.
 | #   | Task                                                                                                                                                                                   | Where                                                                      |
 | --- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------- |
 | 10  | **Orders: date range filter + status filter** — filter by past 30/60/90 days and by status (paid, refunded, etc.)                                                                      | `app/admin/orders/page.tsx` has a TODO                                     |
-| 11  | **Orders: CSV export** — download current filtered view as a spreadsheet                                                                                                               | `app/admin/orders/page.tsx` has a TODO                                     |
+| 11  | ✅ **Orders: CSV export** — done                                                                                                                                                          | `components/admin/ExportOrdersButton.tsx`                                  |
 | 12  | **Calculated shipping** — currently flat $8 or free over $60; integrate a carrier API (EasyPost / Shippo) for real rates                                                               | `components/checkout/CheckoutModal.tsx` + `components/cart/CartDrawer.tsx` |
 | 13  | **Admin: page/feature visibility controls** — admin-configurable show/hide for nav, footer, and shop sub-pages, split between guest and account-holder audiences. See full spec below. | New admin settings section + nav/footer components                         |
+| 19  | **Shipping address verification** — validate a shipping address is real/deliverable before accepting the order (e.g. USPS/Smarty/Shippo address validation API), to cut down on failed or returned shipments | New at checkout, before `create-payment-intent`                            |
 
 See [Visibility Control Spec](#visibility-control-spec-item-13) below for the full breakdown of item 13.
 
@@ -522,9 +523,11 @@ See [Visibility Control Spec](#visibility-control-spec-item-13) below for the fu
 
 | #   | Task                                                                                                                                                                    | Where                                       |
 | --- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------- |
-| 14  | **Star ratings on coffee cards** — requires `Rating` model (userId, coffeeId, 1–5 stars), order-history gate (only buyers can rate), aggregated display on `CoffeeCard` | `components/shop/CoffeeCard.tsx` has a TODO |
-| 15  | **"Notify Me" for out-of-stock coffees** — requires `StockAlert` model; email all subscribers when admin marks item back in stock                                       | `components/shop/CoffeeCard.tsx` has a TODO |
-| 16  | **Inventory quantity tracking** — currently just an in/out toggle; add `qty` field and decrement on purchase via webhook                                                | `prisma/schema.prisma` + webhook            |
+| 14  | **Star ratings on coffee cards** — requires `Rating` model (userId, coffeeId, 1–5 stars, optional comment + roast purchased), order-history gate (only account holders who bought that coffee can rate), aggregated display on `CoffeeCard` | `components/shop/CoffeeCard.tsx` has a TODO |
+| 15  | **"Notify Me" for out-of-stock coffees and merch** — requires `StockAlert` model; email subscribers when admin marks item back in stock                                       | `components/shop/CoffeeCard.tsx` has a TODO |
+| 16  | **Inventory quantity tracking** — currently just an in/out toggle; add a real stock quantity (lbs/oz for coffee, count for merch) to `Product`, decrement automatically as orders come in, plus a manual admin adjustment (e.g. free roast for a friend) that isn't tied to an order — and surface the live quantity to shoppers on both coffee and merch so it visibly ticks down as they add to cart | `prisma/schema.prisma` (`Product`) + checkout/webhook + shop UI |
+| 17  | **Forgot password** — NextAuth Credentials login has no password-reset path; add a reset-token + email flow using the existing Resend integration                     | `app/account/login/`, new `/api/auth/forgot-password` + `/api/auth/reset-password`, `lib/email.ts` |
+| 18  | **Local pickup option (coffee only)** — let a customer choose in-store pickup instead of shipping, but only for coffee line items (merch ships separately from a third-party printer/fulfiller). Pickup address (3607 Wilshire Terrace, San Diego, CA 92104) must be an admin-editable setting, not hardcoded. Pickup is weekends-only — needs to be clear to both the customer at checkout and the admin/roaster on the order. A mixed cart (coffee pickup + merch shipped) needs split fulfillment so shipping cost only applies to the shipped portion. Admin dashboard needs a distinct view of expected pickups (which orders, which dates) separate from orders that are shipping. Nontrivial — touches checkout flow, `Order`/`OrderItem` schema (fulfillment type), `SiteContent`-style admin-editable settings, and admin order views | Checkout flow, `prisma/schema.prisma` (`Order`), `app/admin/orders/`, new admin settings entry |
 
 ### Visibility Control Spec (Item 13)
 
@@ -589,6 +592,9 @@ This likely needs a new admin settings model (e.g. `SiteVisibilitySettings`) sto
 - ✅ Role-based access control (customer vs admin)
 - ✅ Contact, wholesale, and coffee cart inquiries saved to DB and manageable from `/admin/submissions` (tabs, unread badges, threaded email replies)
 - ✅ Resend integration (`lib/email.ts`) — needs an account + verified domain to actually send, see `.env.local.example`
+- ✅ Gift card recipient email delivery — real-time, scheduled/future delivery via cron, and admin resend, all send the recipient their code + balance
+- ✅ Real recurring Stripe Subscriptions billing (not one-time) with full self-service + admin management — see "Subscriptions" above
+- ✅ Admin: subscriptions dashboard, CSV export for both orders and subscriptions
 
 ## Not Yet Included
 
@@ -596,21 +602,25 @@ This likely needs a new admin settings model (e.g. `SiteVisibilitySettings`) sto
 
 - ❌ Fulfillment / "your order has shipped" emails (Resend is wired up, just not triggered from the orders page yet — gift cards and subscriptions already send their own transactional emails)
 - ❌ Inbound email threading is code-complete but requires a verified domain + MX record + Resend webhook — see `INBOUND_EMAIL_DOMAIN` in `.env.local.example`
+- ❌ Forgot-password / reset-password flow (login is Credentials-only, no reset path yet)
 
 ### Payments / Subscriptions
 
 - ❌ Calculated shipping rates — flat rate only: free over $60, $8 otherwise
+- ❌ Local pickup option for coffee orders (weekends-only, admin-editable pickup address, split fulfillment when merch is also in the cart)
+- ❌ Shipping address verification (no USPS/Smarty/Shippo deliverability check before accepting an order)
 
 ### Admin Dashboard
 
 - ❌ Order sorting and filtering — date range buttons (30 / 60 / 90 days / all time), sort by customer name (`app/admin/orders/page.tsx`)
-- ❌ CSV export for orders — export currently filtered rows with order ID, customer, items, amount, status, date (`app/admin/orders/page.tsx`)
+- ❌ Page/feature visibility controls (guest vs. account-holder toggles for nav/footer/shop tabs — see Visibility Control Spec above)
+- ❌ Distinct "expected pickups" view (depends on the local pickup option above)
 
 ### Shop
 
-- ❌ Star ratings on coffee cards — requires `Rating` model (userId, coffeeId, stars 1–5), order-history verification before saving, and display on `CoffeeCard` (`components/shop/CoffeeCard.tsx`)
-- ❌ "Notify Me" for out-of-stock coffees — requires `StockAlert` model, email trigger when admin marks item back in stock (`components/shop/CoffeeCard.tsx`)
-- ❌ Inventory management / quantity tracking
+- ❌ Star ratings on coffee cards — requires `Rating` model (userId, coffeeId, stars 1–5, optional comment + roast purchased), order-history verification before saving, and display on `CoffeeCard` (`components/shop/CoffeeCard.tsx`)
+- ❌ "Notify Me" for out-of-stock coffees and merch — requires `StockAlert` model, email trigger when admin marks item back in stock (`components/shop/CoffeeCard.tsx`)
+- ❌ Inventory management / quantity tracking (lbs/oz for coffee, count for merch), with live stock shown to shoppers and a manual admin adjustment path outside of orders
 
 ---
 

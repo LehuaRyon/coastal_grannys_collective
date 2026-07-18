@@ -150,9 +150,13 @@ When you go live, real orders will land in that same database the exact same way
 
 What isn't built yet:
 
-- An automated "your order has shipped" email (needs an email service like Resend or SendGrid)
+- An automated "your order has shipped" email (Resend is already connected for other emails — gift cards and subscriptions already send their own — this one just isn't wired up yet)
 - Inventory tracking / quantity limits
-- Recurring subscription billing (currently charged as one-time payments)
+- A forgot-password option on login
+- A local pickup option (as an alternative to shipping) for coffee orders
+- Shipping address verification before an order is accepted
+
+What **is** now built that wasn't when this was first written: subscriptions bill on real recurring schedules through Stripe (not one-time payments), and gift cards email the recipient their code automatically.
 
 ---
 
