@@ -408,7 +408,7 @@ Via CLI (prompts you to paste the value, then pick which environment(s) it appli
 
 ```bash
 npx vercel env add DATABASE_URL production
-npx vercel env add DATABASE_URL preview   # and again targeting the dev Neon branch
+npx vercel env add DATABASE_URL preview --no-sensitive   # --no-sensitive required for the label workflow below to be able to read it
 ```
 
 Or add them all at once in the dashboard: Project → **Settings → Environment Variables**.
@@ -420,15 +420,17 @@ npx vercel env ls production
 npx vercel env ls preview
 ```
 
-Pull real values locally into a file if you need to inspect/copy one (careful — writes actual secrets to disk):
+Pull real values locally into a file if you need to inspect/copy one (careful — writes actual secrets to disk) — **only works for non-sensitive variables**, see below:
 
 ```bash
 npx vercel env pull .env.vercel.production --environment=production
 ```
 
+**Sensitive vs. non-sensitive matters more than it looks.** `vercel env add` defaults to marking a variable **Sensitive**, which means its real value can never be read back afterward via `vercel pull`/`env pull`/the API — only used directly by deployments that build *on Vercel's own infrastructure* (git push, dashboard, `vercel --prod`/`vercel` from this machine). That's invisible and harmless for Production/normal deploys. It actively breaks the label-triggered PR workflow below, though, since that runs `vercel pull` + `vercel build` on a GitHub Actions runner (not Vercel's infra) and needs the *real* value to prerender pages — a Sensitive var comes back as the literal string `"[SENSITIVE]"`, which is exactly indistinguishable from a real secret until something tries to use it and fails with a confusing error (in this case, a Prisma "URL must start with postgresql://" error, discovered live during testing). **Preview** variables must be added with `--no-sensitive` for this reason; Production doesn't need it.
+
 ### 3. Deploying a live "dev" preview (not production)
 
-To see the app live without touching `main`/Production: deploy from any other branch. For a Git-connected Vercel project, Production vs. Preview is decided by **which git branch you're on**, not the `--prod` flag — `vercel` (no flags) run while on `main` still deploys to Production, since `main` is the project's designated Production Branch. Switch to a non-`main` branch first (e.g. `git checkout -b dev`), then run `npx vercel` — it'll deploy as Preview, using whatever env vars are scoped to the Preview environment (the dev Neon branch + test Stripe keys, per "Development vs. Production Environments" below).
+To see the app live without touching `main`/Production: deploy from any other branch. For a Git-connected Vercel project, Production vs. Preview is decided by **which git branch you're on**, not the `--prod` flag — `vercel` (no flags) run while on `main` still deploys to Production, since `main` is the project's designated Production Branch. Switch to any throwaway non-`main` branch first (e.g. `git checkout -b scratch`), then run `npx vercel` — it'll deploy as Preview, using whatever env vars are scoped to the Preview environment (the dev Neon branch + test Stripe keys, per "Development vs. Production Environments" below). This is a one-off manual escape hatch — the actual established workflow for ongoing dev testing is the **`deploy-dev` PR label** described further down, not a persistent branch (an earlier persistent `dev` branch was retired in favor of it, see that section for why).
 
 A plain CLI deploy gets a random per-deployment URL and doesn't get Vercel's automatic stable "git branch" alias (that only forms via a GitHub push, not a local CLI deploy). If you want a fixed URL for repeated testing (e.g. to register a Stripe webhook against it, or to bookmark it), assign one manually and re-point it after each new deploy:
 
@@ -553,7 +555,7 @@ When you're ready to go live, swap in live Stripe keys in Vercel (not in `.env.l
 | -------------- | ---------------------------------- | ---------------------------------------------------------------- | ---------------------------------- |
 | Database       | Neon dev branch                    | Neon dev branch                                                  | Neon prod branch                   |
 | Stripe         | Test keys (`pk_test_`, `sk_test_`) | Test keys (`pk_test_`, `sk_test_`)                                | Live keys (`pk_live_`, `sk_live_`) |
-| Stripe webhook | `stripe listen` CLI                | Registered in Stripe Dashboard (optional, for testing previews)  | Registered in Stripe Dashboard     |
+| Stripe webhook | `stripe listen` CLI                | ✅ Registered (test mode, against `dev.coastalgrannys.com`, bypass secret baked into the URL — 2026-07-18) | Not yet registered — see Going Live Checklist |
 | `AUTH_SECRET`  | Any random string                  | Any random string                                                 | `openssl rand -base64 32`          |
 
 Preview deployments are what Vercel automatically creates for every branch/PR once the GitHub repo is connected (see "Deploying to Vercel" above) — scoping the dev Neon branch + test Stripe keys to the **Preview** environment means those auto-deploys are as safe to poke at as local dev, never touching production data.
@@ -569,11 +571,13 @@ Preview deployments are what Vercel automatically creates for every branch/PR on
 3. **Deploy to Vercel** — see above
    - [x] Vercel project created & linked (`coastal-grannys-collective` under `jasmineryons-projects`) — 2026-07-18
    - [x] GitHub repo connected (`LehuaRyon/coastal_grannys_collective`) — pushes to `main` now auto-deploy to Production, any other branch/PR to Preview — 2026-07-18 (required installing the Vercel GitHub App separately from the account login connection — see "Deploying to Vercel" above if this ever needs redoing on a new machine/account)
+   - [x] Custom domain `coastalgrannys.com` purchased and attached to the project (Production); `dev.coastalgrannys.com` attached and used by the label-triggered dev workflow (Preview) — 2026-07-18
    - [x] All 8 core env vars set for **Production** (`DATABASE_URL`/`DIRECT_URL` → prod Neon branch, test-mode Stripe keys for now, a freshly generated `AUTH_SECRET` — distinct from the local dev one, `RESEND_API_KEY`/`EMAIL_FROM`/`NOTIFY_EMAIL`) — 2026-07-18
-   - [x] All 8 core env vars set for **Preview** (same set, pointed at the dev Neon branch instead) — 2026-07-18
-   - [ ] `STRIPE_WEBHOOK_SECRET` still not set for either environment — needs a real webhook registered against the deployed domain, which doesn't exist until after the first deploy (see step 4)
-   - [ ] `CRON_SECRET` still not set (see step 9)
-   - [ ] The actual first deploy hasn't been triggered yet — push to `main`, or run `vercel --prod`
+   - [x] All 8 core env vars + `STRIPE_WEBHOOK_SECRET` + `CRON_SECRET` set for **Preview** (same set, pointed at the dev Neon branch instead, added `--no-sensitive` — required for the label-workflow's CI build to actually read the values, see "Set environment variables per environment" above) — 2026-07-18
+   - [x] Label-triggered dev-deploy workflow (`deploy-dev` PR label → build → deploy → alias `dev.coastalgrannys.com` → PR comment with a working shareable link) built, debugged, and verified end-to-end — 2026-07-18/19. The old persistent `dev` git branch this replaced has been deleted.
+   - [ ] `STRIPE_WEBHOOK_SECRET` still not set for **Production** — needs a real webhook registered against `coastalgrannys.com` once it's actually live (see step 4)
+   - [ ] `CRON_SECRET` still not set for **Production** (see step 9)
+   - [ ] ⚠️ **The actual blocker right now, separate from the two items above:** Production is intentionally gated via Settings → Build and Deployment → **Ignored Build Step** (`if [ "$VERCEL_ENV" == "production" ]; then exit 0; else exit 1; fi`), added deliberately so the label workflow and push-to-`main` auto-deploy could both be built and tested without `coastalgrannys.com` actually going live. Confirmed still in effect as of 2026-07-19 (`curl coastalgrannys.com` → `404`, latest Production deploy attempt shows `Canceled`). **This must be removed (or its condition changed) before any push to `main` will actually publish anything** — it silently cancels every Production build otherwise, regardless of how ready everything else on this list is.
 4. **Register production webhook in Stripe (live mode)** — separate from test mode webhook
 5. **Flip to live keys** — replace `pk_test_` / `sk_test_` with live keys in Vercel → redeploy
 6. **Verify a Resend sending domain** — `RESEND_API_KEY` is set, but `EMAIL_FROM` is still the `onboarding@resend.dev` sandbox default, which can only send to your own Resend account email:
@@ -647,6 +651,7 @@ See [Visibility Control Spec](#visibility-control-spec-item-13) below for the fu
 | 16  | **Inventory quantity tracking** — currently just an in/out toggle; add a real stock quantity (lbs/oz for coffee, count for merch) to `Product`, decrement automatically as orders come in, plus a manual admin adjustment (e.g. free roast for a friend) that isn't tied to an order — and surface the live quantity to shoppers on both coffee and merch so it visibly ticks down as they add to cart | `prisma/schema.prisma` (`Product`) + checkout/webhook + shop UI |
 | 17  | **Forgot password** — NextAuth Credentials login has no password-reset path; add a reset-token + email flow using the existing Resend integration                     | `app/account/login/`, new `/api/auth/forgot-password` + `/api/auth/reset-password`, `lib/email.ts` |
 | 18  | **Local pickup option (coffee only)** — let a customer choose in-store pickup instead of shipping, but only for coffee line items (merch ships separately from a third-party printer/fulfiller). Pickup address (3607 Wilshire Terrace, San Diego, CA 92104) must be an admin-editable setting, not hardcoded. Pickup is weekends-only — needs to be clear to both the customer at checkout and the admin/roaster on the order. A mixed cart (coffee pickup + merch shipped) needs split fulfillment so shipping cost only applies to the shipped portion. Admin dashboard needs a distinct view of expected pickups (which orders, which dates) separate from orders that are shipping. Nontrivial — touches checkout flow, `Order`/`OrderItem` schema (fulfillment type), `SiteContent`-style admin-editable settings, and admin order views | Checkout flow, `prisma/schema.prisma` (`Order`), `app/admin/orders/`, new admin settings entry |
+| 20  | **Mobile responsiveness pass** — UI needs adjusting across the board for mobile; layout/spacing/sizing isn't holding up well on small screens. Needs an actual audit page-by-page (shop, cart/checkout, account, admin) rather than a single fix — flagged 2026-07-19, not yet scoped further | Likely `app/globals.css`, Tailwind breakpoints across `components/` |
 
 ### Visibility Control Spec (Item 13)
 
@@ -684,7 +689,7 @@ This likely needs a new admin settings model (e.g. `SiteVisibilitySettings`) sto
 
 ## What's Included
 
-- ✅ Responsive design (mobile, tablet, desktop)
+- ⚠️ Basic responsive layout (mobile, tablet, desktop) — renders on all sizes, but the mobile UI needs a real adjustment/polish pass, flagged 2026-07-19 — see Phase 4 item 20
 - ✅ Coffee page with roast, origin, tasting notes, and stock filters
 - ✅ Coffee product modal with size selection and out-of-stock handling
 - ✅ Real recurring subscriptions (Stripe Subscriptions API) with admin-configurable roast preference picker, self-service pause/resume/cancel, and per-cycle order fulfillment — see "Subscriptions" below
@@ -740,6 +745,7 @@ This likely needs a new admin settings model (e.g. `SiteVisibilitySettings`) sto
 - ❌ Star ratings on coffee cards — requires `Rating` model (userId, coffeeId, stars 1–5, optional comment + roast purchased), order-history verification before saving, and display on `CoffeeCard` (`components/shop/CoffeeCard.tsx`)
 - ❌ "Notify Me" for out-of-stock coffees and merch — requires `StockAlert` model, email trigger when admin marks item back in stock (`components/shop/CoffeeCard.tsx`)
 - ❌ Inventory management / quantity tracking (lbs/oz for coffee, count for merch), with live stock shown to shoppers and a manual admin adjustment path outside of orders
+- ❌ Mobile UI polish — layout/spacing/sizing needs adjusting across the board on small screens (item 20)
 
 ---
 
