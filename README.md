@@ -382,26 +382,119 @@ When an order is placed, the webhook looks up whether the customer's email match
 
 ## Deploying to Vercel
 
-### 1. Deploy
+### 1. Link the project (Vercel CLI)
 
-1. Push to GitHub
-2. Import to [vercel.com](https://vercel.com)
-3. Add environment variables: `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY`, `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `DATABASE_URL`, `AUTH_SECRET`
-4. Deploy
-
-After deploying, run the migration once:
+No global install needed — `npx vercel` fetches the CLI on demand.
 
 ```bash
-DATABASE_URL="your-neon-connection-string" npx prisma migrate deploy
+npx vercel login   # interactive — opens browser/email verification
+npx vercel link    # links this folder to the Vercel project; does NOT deploy anything
+```
+
+`vercel link` only associates the repo with a Vercel project (creates `.vercel/project.json`, gitignored) — it doesn't publish anything live by itself.
+
+**Connecting the GitHub repo** (needed for automatic deploys on push) requires your Vercel account to have a GitHub **Login Connection** first — a one-time account-level authorization, separate from just having a GitHub account:
+
+1. Go to https://vercel.com/account/login-connections and connect GitHub
+2. Then, in the Vercel dashboard: Project → **Settings → Git → Connect Git Repository** → select the repo (or re-run `vercel link`)
+
+### 2. Set environment variables per environment
+
+Vercel scopes env vars by environment (**Production** / **Preview** / **Development**) inside a single project — you do not need separate projects for dev vs. prod. Set `DATABASE_URL`/`DIRECT_URL` differently per environment: Production → your prod Neon branch, Preview + Development → your dev Neon branch (see "Development vs. Production Environments" below).
+
+Full list of variables to set for **Production**: `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY`, `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `DATABASE_URL`, `DIRECT_URL`, `AUTH_SECRET`, `RESEND_API_KEY`, `EMAIL_FROM`, `NOTIFY_EMAIL` (plus `INBOUND_EMAIL_DOMAIN`/`RESEND_WEBHOOK_SECRET` if inbound email replies are set up).
+
+Via CLI (prompts you to paste the value, then pick which environment(s) it applies to):
+
+```bash
+npx vercel env add DATABASE_URL production
+npx vercel env add DATABASE_URL preview   # and again targeting the dev Neon branch
+```
+
+Or add them all at once in the dashboard: Project → **Settings → Environment Variables**.
+
+Check what's set without exposing values:
+
+```bash
+npx vercel env ls production
+npx vercel env ls preview
+```
+
+Pull real values locally into a file if you need to inspect/copy one (careful — writes actual secrets to disk):
+
+```bash
+npx vercel env pull .env.vercel.production --environment=production
+```
+
+### 3. Deploying a live "dev" preview (not production)
+
+To see the app live without touching `main`/Production: deploy from any other branch. For a Git-connected Vercel project, Production vs. Preview is decided by **which git branch you're on**, not the `--prod` flag — `vercel` (no flags) run while on `main` still deploys to Production, since `main` is the project's designated Production Branch. Switch to a non-`main` branch first (e.g. `git checkout -b dev`), then run `npx vercel` — it'll deploy as Preview, using whatever env vars are scoped to the Preview environment (the dev Neon branch + test Stripe keys, per "Development vs. Production Environments" below).
+
+A plain CLI deploy gets a random per-deployment URL and doesn't get Vercel's automatic stable "git branch" alias (that only forms via a GitHub push, not a local CLI deploy). If you want a fixed URL for repeated testing (e.g. to register a Stripe webhook against it, or to bookmark it), assign one manually and re-point it after each new deploy:
+
+```bash
+npx vercel alias set <deployment-url> coastal-grannys-collective-dev.vercel.app
+```
+
+**Deployment Protection blocks automated requests by default.** Vercel's "Vercel Authentication" (on by default under Project Settings → Deployment Protection) puts every non-Production deployment behind a login wall — this silently 302-redirects *any* unauthenticated request, including Stripe's real webhook deliveries and manual `curl` testing, to a Vercel SSO page instead of reaching your app. Fix: Project Settings → Deployment Protection → **Protection Bypass for Automation** → Add Secret (must be exactly 32 characters). Then append it to any URL that needs to reach the protected deployment as a query param — `?x-vercel-protection-bypass=<secret>` — since Stripe can't send custom headers on webhook deliveries, only a URL. This is what makes it possible to fully test checkout webhooks and cron endpoints against a live dev/Preview deployment without ever needing a production deploy:
+
+- **Testing a cron endpoint manually** (Preview deployments never auto-run Vercel Cron — see below) — `CRON_SECRET` must also be set for Preview:
+  ```bash
+  curl "https://coastal-grannys-collective-dev.vercel.app/api/cron/deliver-scheduled-gift-cards?x-vercel-protection-bypass=<secret>" \
+    -H "Authorization: Bearer <CRON_SECRET>"
+  ```
+- **Registering a real Stripe test-mode webhook against the dev alias** — bake the bypass secret straight into the webhook's URL when creating/updating it (Stripe Dashboard → Developers → Webhooks, or via the API), so every real delivery includes it automatically:
+  ```
+  https://coastal-grannys-collective-dev.vercel.app/api/webhooks/stripe?x-vercel-protection-bypass=<secret>
+  ```
+
+Note Vercel Cron Jobs (defined in `vercel.json`) only ever fire against **Production** deployments regardless of this bypass — there's no way to get Preview to run them on a schedule, manual `curl` (as above) is the only way to exercise that code path pre-launch.
+
+If you'd rather not deal with any of this, the simpler (less locked-down) alternative is turning off Deployment Protection entirely for Preview in the same settings page — makes the dev URL reachable by anyone with the link, no Vercel login needed.
+
+**Sharing the dev deployment with people who don't have a Vercel login:** Deployment Protection still blocks regular browser visitors even once the automation bypass above is set up (that bypass is for server-to-server calls like Stripe, not for handing out to people) — this applies even on the real custom domain (`dev.coastalgrannys.com`), not just the `.vercel.app` one. To let someone without a Vercel account view it: Vercel dashboard → the deployment → **Share** button → the dropdown defaults to "Only people with access" (i.e. inviting specific people/emails) — change it to **"Anyone with the link"** → **Copy Link**. The result looks like:
+```
+https://dev.coastalgrannys.com?_vercel_share=<token>
+```
+Visiting that URL sets a `_vercel_jwt` cookie (7-day expiry) that gets the visitor past the login wall from then on, so the token only needs to be in the URL once per person. Verified working end-to-end (confirmed a real `200` with actual page content via `curl -L` following the redirect chain, not just the initial redirect). Treat the link as semi-private — anyone who has the exact URL gets in — and note it's tied to one specific deployment, so a new `dev` push that creates a fresh deployment may need a new share link regenerated the same way.
+
+### Custom domain (`coastalgrannys.com`)
+
+Bought 2026-07-18 through Vercel Domains (Project → **Domains** → search → Buy) under the `jasmineryons-projects` team — see item 10 in the Going Live Checklist below for the payment-method/ownership follow-up this requires before launch. One purchase covers the apex domain and unlimited subdomains for free (subdomains aren't separate purchases):
+
+- `coastalgrannys.com` → attached to the project, serves **Production**
+- `dev.coastalgrannys.com` → bound to the **`dev` git branch** specifically, so it always serves the latest Preview deploy of that branch instead of Production. The CLI doesn't expose per-domain git-branch binding directly; it's a Vercel API call:
+  ```bash
+  curl -X PATCH "https://api.vercel.com/v9/projects/<project-id>/domains/dev.coastalgrannys.com?teamId=<team-id>" \
+    -H "Authorization: Bearer <vercel-token>" -H "Content-Type: application/json" \
+    -d '{"gitBranch":"dev"}'
+  ```
+  (`<vercel-token>` is whatever `npx vercel whoami` is authenticated with — stored locally at `~/Library/Application Support/com.vercel.cli/auth.json` on macOS.)
+
+Binding a domain to a git branch only works once that branch actually exists on GitHub — a local-only branch that's only ever been deployed via CLI (`npx vercel`, no push) isn't visible to Vercel's Git integration and the API call fails with `git_branch_not_found` until you `git push -u origin dev` at least once.
+
+**If `git push` fails with "Password authentication is not supported for Git operations"** — a stale/invalid cached credential in the macOS keychain, not a real permissions issue. Fix:
+```bash
+gh auth login       # authenticate the GitHub CLI (device code flow via browser)
+gh auth setup-git    # the actual fix — rewires git's credential helper to use gh instead of the stale keychain entry
+git push -u origin dev
+```
+
+### 4. Deploy to production
+
+Push to GitHub (once the repo is connected, this auto-deploys `main` to Production) or run `npx vercel --prod` directly. After the first deploy, run the migration once against the production database:
+
+```bash
+DATABASE_URL="your-prod-neon-connection-string" npx prisma migrate deploy
 ```
 
 Then seed the products:
 
 ```bash
-DATABASE_URL="your-neon-connection-string" npx tsx prisma/seed-products.ts
+DATABASE_URL="your-prod-neon-connection-string" npx tsx prisma/seed-products.ts
 ```
 
-### 2. Register the production webhook
+### 5. Register the production webhook
 
 Stripe Dashboard → Developers → Webhooks → Add endpoint:
 
@@ -426,7 +519,7 @@ Neon lets you create a database branch in seconds — it's a full copy of your s
 5. Run `npm run db:migrate` to apply the schema to the dev branch
 6. Run `npm run db:seed-products` to populate dev data
 
-Your production database stays untouched. When you deploy to Vercel, add the **production** connection strings as environment variables there.
+Your production database stays untouched. When you deploy to Vercel, add the **production** connection strings as environment variables there — see "Deploying to Vercel" above for the exact CLI commands (`vercel env add`), and scope the dev branch's strings to the **Preview**/**Development** environments so branch previews never touch prod data either.
 
 ### Stripe test vs. live mode
 
@@ -440,12 +533,14 @@ When you're ready to go live, swap in live Stripe keys in Vercel (not in `.env.l
 
 ### Environment summary
 
-|                | Local dev                          | Production (Vercel)                |
-| -------------- | ---------------------------------- | ---------------------------------- |
-| Database       | Neon dev branch                    | Neon main branch                   |
-| Stripe         | Test keys (`pk_test_`, `sk_test_`) | Live keys (`pk_live_`, `sk_live_`) |
-| Stripe webhook | `stripe listen` CLI                | Registered in Stripe Dashboard     |
-| `AUTH_SECRET`  | Any random string                  | `openssl rand -base64 32`          |
+|                | Local dev                          | Preview (Vercel)                                                | Production (Vercel)                |
+| -------------- | ---------------------------------- | ---------------------------------------------------------------- | ---------------------------------- |
+| Database       | Neon dev branch                    | Neon dev branch                                                  | Neon prod branch                   |
+| Stripe         | Test keys (`pk_test_`, `sk_test_`) | Test keys (`pk_test_`, `sk_test_`)                                | Live keys (`pk_live_`, `sk_live_`) |
+| Stripe webhook | `stripe listen` CLI                | Registered in Stripe Dashboard (optional, for testing previews)  | Registered in Stripe Dashboard     |
+| `AUTH_SECRET`  | Any random string                  | Any random string                                                 | `openssl rand -base64 32`          |
+
+Preview deployments are what Vercel automatically creates for every branch/PR once the GitHub repo is connected (see "Deploying to Vercel" above) — scoping the dev Neon branch + test Stripe keys to the **Preview** environment means those auto-deploys are as safe to poke at as local dev, never touching production data.
 
 ---
 
@@ -456,6 +551,13 @@ When you're ready to go live, swap in live Stripe keys in Vercel (not in `.env.l
 1. **Stripe business verification** — enter business name, address, and bank account in Stripe Dashboard
 2. **Change Stripe receipt/support email** — Stripe Dashboard → Settings → Business → update to the shop's real email
 3. **Deploy to Vercel** — see above
+   - [x] Vercel project created & linked (`coastal-grannys-collective` under `jasmineryons-projects`) — 2026-07-18
+   - [x] GitHub repo connected (`LehuaRyon/coastal_grannys_collective`) — pushes to `main` now auto-deploy to Production, any other branch/PR to Preview — 2026-07-18 (required installing the Vercel GitHub App separately from the account login connection — see "Deploying to Vercel" above if this ever needs redoing on a new machine/account)
+   - [x] All 8 core env vars set for **Production** (`DATABASE_URL`/`DIRECT_URL` → prod Neon branch, test-mode Stripe keys for now, a freshly generated `AUTH_SECRET` — distinct from the local dev one, `RESEND_API_KEY`/`EMAIL_FROM`/`NOTIFY_EMAIL`) — 2026-07-18
+   - [x] All 8 core env vars set for **Preview** (same set, pointed at the dev Neon branch instead) — 2026-07-18
+   - [ ] `STRIPE_WEBHOOK_SECRET` still not set for either environment — needs a real webhook registered against the deployed domain, which doesn't exist until after the first deploy (see step 4)
+   - [ ] `CRON_SECRET` still not set (see step 9)
+   - [ ] The actual first deploy hasn't been triggered yet — push to `main`, or run `vercel --prod`
 4. **Register production webhook in Stripe (live mode)** — separate from test mode webhook
 5. **Flip to live keys** — replace `pk_test_` / `sk_test_` with live keys in Vercel → redeploy
 6. **Verify a Resend sending domain** — `RESEND_API_KEY` is set, but `EMAIL_FROM` is still the `onboarding@resend.dev` sandbox default, which can only send to your own Resend account email:
@@ -477,6 +579,7 @@ When you're ready to go live, swap in live Stripe keys in Vercel (not in `.env.l
    - **Verify Cron is actually enabled** — it's included on Hobby (limited to daily-or-slower schedules) and Pro plans, but confirm under Vercel Dashboard → your project → Settings → Cron Jobs after your first deploy; it won't error loudly if it's silently not running
    - `/admin/gift-cards` shows a warning banner if the cron hasn't run in the last ~26 hours, or if any scheduled card is overdue — check there after going live to confirm it's actually firing
    - If you want an extra layer of certainty beyond that in-app banner, a free external monitor (e.g. cron-job.org, UptimeRobot) hitting the same endpoint with the `CRON_SECRET` header on the same schedule works as a redundant trigger — not required, just extra insurance
+10. **Switch Vercel's billing/payment method to the real Coastal Granny's admin account** — `coastalgrannys.com` was purchased 2026-07-18 through Vercel Domains under the `jasmineryons-projects` team, on whatever payment card was on file for that account at the time. Domain registration isn't one-time — it renews annually (~$11.25/yr at time of purchase) and will silently keep charging that same card unless updated. Before real launch: Vercel Dashboard → Team Settings → Billing → update the payment method to the business's actual card, and confirm the domain's auto-renewal will draw from it. Also worth deciding at this point whether the project should ultimately live under a Vercel team tied to the business's own account rather than a personal one.
 
 ---
 
