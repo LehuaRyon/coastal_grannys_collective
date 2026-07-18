@@ -21,7 +21,7 @@ It includes:
 
 ---
 
-## How does a customer buy something?
+## How does a customer buy something
 
 1. They visit the site and browse the coffee page
 2. They click a product to see details, pick a size, and add it to their cart
