@@ -480,6 +480,18 @@ gh auth setup-git    # the actual fix — rewires git's credential helper to use
 git push -u origin dev
 ```
 
+### Label-triggered PR deploys to the shared dev environment
+
+`.github/workflows/deploy-dev-on-label.yml` — adding the **`deploy-dev`** label to a PR (or pushing new commits while it's already applied) builds and deploys that PR's actual branch/commit as a Preview, then points `dev.coastalgrannys.com` at it. This replaced an earlier approach that used a persistent `dev` git branch — that branch has been deleted; nothing needs to be kept "in sync" with `main` anymore, since the dev environment's content is now just whichever PR was last labeled, not a real branch. Closing/merging the PR or removing the label does nothing further on purpose — the domain keeps serving the last deployment until another PR claims it, rather than resetting to some default state.
+
+Requires three repository secrets (Settings → Secrets and variables → Actions, already set as of 2026-07-18): `VERCEL_TOKEN` (a dedicated token from https://vercel.com/account/tokens — the CLI session used for everything else in this doc is authenticated via a scoped plugin integration that can't mint new tokens itself, so this one has to be created manually), `VERCEL_ORG_ID` (`team_YvNfQhQsyoyzD4qgK6VEzZQU`), `VERCEL_PROJECT_ID` (`prj_oXOMYkESfxLZexOn1H3kHuRyevK7`). These are CI-only — the app itself never reads any of them, so they don't belong in `.env.local`.
+
+**Production is intentionally gated right now** via Settings → Build and Deployment → **Ignored Build Step**:
+```bash
+if [ "$VERCEL_ENV" == "production" ]; then exit 0; else exit 1; fi
+```
+This means push-to-`main` auto-deploy (and this new label workflow) can both be fully wired up and exercised without `coastalgrannys.com` actually going live — every Production build is skipped, Preview/dev-label builds are unaffected. Production also isn't functionally ready yet regardless (DB never migrated, no webhook registered, no `CRON_SECRET`) — see the Going Live Checklist. **To actually launch:** remove or change this Ignored Build Step condition, finish the remaining Going Live Checklist items, then push to `main` (or run `vercel --prod`).
+
 ### 4. Deploy to production
 
 Push to GitHub (once the repo is connected, this auto-deploys `main` to Production) or run `npx vercel --prod` directly. After the first deploy, run the migration once against the production database:
