@@ -53,5 +53,5 @@ jobs:
               issue_number: context.issue.number,
               owner: context.repo.owner,
               repo: context.repo.repo,
-              body: '🚀 Deployed this PR to the shared dev environment: https://dev.coastalgrannys.com'
+              body: '🚀 Deployed this PR to the shared dev environment: https://dev.coastalgrannys.com?_vercel_share=${{ secrets.VERCEL_SHARE_TOKEN }}'
             })
