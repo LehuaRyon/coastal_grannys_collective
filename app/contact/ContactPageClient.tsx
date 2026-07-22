@@ -6,6 +6,7 @@ import { showToast } from '@/components/ui/Toast';
 import { Button } from '@/components/ui/Button';
 import { PhoneInput } from '@/components/ui/PhoneInput';
 import { useFormErrors } from '@/lib/hooks/useFormErrors';
+import { isValidEmail } from '@/lib/utils/email';
 import Link from 'next/link';
 import { MapPinIcon, ClockIcon, EnvelopeSimpleIcon, PackageIcon, CheckCircleIcon } from '@phosphor-icons/react';
 
@@ -61,9 +62,15 @@ export default function ContactPageClient({ details }: { details: Details }) {
     if (!form.firstName) missing.add('firstName');
     if (!form.email) missing.add('email');
     if (!form.message) missing.add('message');
+    const emailInvalid = !!form.email && !isValidEmail(form.email);
+    if (emailInvalid) missing.add('email');
     if (missing.size > 0) {
       setErrors(missing);
-      showToast('Please fill in all required fields');
+      showToast(
+        missing.size === 1 && emailInvalid
+          ? 'Please enter a valid email address'
+          : 'Please fill in all required fields',
+      );
       return;
     }
     setErrors(new Set());
@@ -135,9 +142,9 @@ export default function ContactPageClient({ details }: { details: Details }) {
         </div>
 
         {/* Form */}
-        <div className="lg:col-span-3 relative rounded-2xl shadow-sm overflow-hidden p-8" style={{ backgroundColor: '#F5EFE6' }}>
+        <div className="lg:col-span-3 relative rounded-2xl shadow-sm overflow-hidden p-0 sm:p-8" style={{ backgroundColor: '#F5EFE6' }}>
           <div className="absolute inset-0 bg-cover bg-no-repeat" style={{ backgroundImage: 'url(/images/contact-bg.png)', backgroundPosition: 'center center' }} />
-          <div className="relative bg-white/80 rounded-xl p-6 backdrop-blur-[2px] mx-14 my-16">
+          <div className="relative bg-white/80 rounded-xl p-6 backdrop-blur-[2px] mx-4 my-6 sm:mx-14 sm:my-16">
           <h2 className="font-serif text-2xl text-stone-900 mb-6">Send a Message</h2>
 
           {submitted ? (
@@ -150,7 +157,7 @@ export default function ContactPageClient({ details }: { details: Details }) {
             </div>
           ) : (
             <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs font-medium text-stone-600 mb-1">First Name *</label>
                   <input
@@ -172,7 +179,7 @@ export default function ContactPageClient({ details }: { details: Details }) {
                   />
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs font-medium text-stone-600 mb-1">Email *</label>
                   <input

@@ -5,6 +5,7 @@ import { showToast } from "@/components/ui/Toast"
 import { useFormErrors } from "@/lib/hooks/useFormErrors"
 import { useCartStore } from "@/lib/store/cart"
 import { blockInvalidNumberKey } from "@/lib/utils/numberInput"
+import { isValidEmail } from "@/lib/utils/email"
 import { CheckIcon } from "@phosphor-icons/react"
 import { useState } from "react"
 
@@ -49,13 +50,16 @@ export function GiftCardsPageClient({
     const missing = new Set<string>()
     if (!amt || amt < content.customMin || amt > content.customMax)
       missing.add("customAmount")
-    if (!recipientEmail) missing.add("recipientEmail")
+    const emailEmpty = !recipientEmail.trim()
+    if (emailEmpty || !isValidEmail(recipientEmail)) missing.add("recipientEmail")
     if (missing.size > 0) {
       setErrors(missing)
       showToast(
         missing.has("customAmount")
           ? `Please enter an amount between $${content.customMin} and $${content.customMax}`
-          : "Please enter a recipient email",
+          : emailEmpty
+            ? "Please enter a recipient email"
+            : "Please enter a valid email address",
       )
       return
     }
@@ -161,7 +165,7 @@ export function GiftCardsPageClient({
             backgroundPosition: "center center",
           }}
         />
-        <div className="relative bg-white/80 rounded-xl p-6 backdrop-blur-[2px] mx-14 my-16">
+        <div className="relative bg-white/80 rounded-xl p-6 backdrop-blur-[2px] mx-4 my-6 sm:mx-14 sm:my-16">
           <h2 className="font-serif text-2xl text-stone-900 mb-1">
             {content.customHeading}
           </h2>
@@ -233,9 +237,11 @@ export function GiftCardsPageClient({
             </p>
           </div>
 
-          <Button variant="primary" onClick={addGiftCard}>
-            Add Gift Card to Cart →
-          </Button>
+          <div className="text-center sm:text-left">
+            <Button variant="primary" onClick={addGiftCard}>
+              Add Gift Card to Cart →
+            </Button>
+          </div>
         </div>
       </div>
     </section>

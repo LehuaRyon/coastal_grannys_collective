@@ -1,6 +1,7 @@
 import Link from "next/link"
 import { prisma } from "@/lib/db"
 import { Reveal } from "@/components/ui/Reveal"
+import { AboutGallery } from "./AboutGallery"
 import {
   CoffeeBeanIcon,
   FlaskIcon,
@@ -210,7 +211,11 @@ export default async function AboutPage() {
 
         {/* Three image cards + quote */}
         <div className="mb-20">
-          <div className="grid grid-cols-3 gap-5 mb-5">
+          {/* Mobile: carousel (one image at a time). Desktop: 3-across grid. */}
+          <div className="sm:hidden mb-5">
+            <AboutGallery />
+          </div>
+          <div className="hidden sm:grid grid-cols-3 gap-5 mb-5">
             <Reveal className="rounded-3xl overflow-hidden shadow-xl aspect-[3/4]">
               <img
                 src="/images/about/cart-popup.png"

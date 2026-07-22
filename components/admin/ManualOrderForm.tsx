@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { showToast } from '@/components/ui/Toast';
+import { isValidEmail } from '@/lib/utils/email';
 
 interface ItemRow {
   name: string;
@@ -34,6 +35,7 @@ export function ManualOrderForm() {
 
   async function submit() {
     if (!customerEmail.trim()) return showToast('Enter a customer email');
+    if (!isValidEmail(customerEmail)) return showToast('Enter a valid email address');
     if (!note.trim()) return showToast('A note explaining this order is required');
     const items = rows
       .filter((r) => r.name.trim() && r.price && r.qty)

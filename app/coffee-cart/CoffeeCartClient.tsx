@@ -12,6 +12,7 @@ import {
 import { useSession } from "next-auth/react"
 import { useEffect, useState } from "react"
 import { useFormErrors } from "@/lib/hooks/useFormErrors"
+import { isValidEmail } from "@/lib/utils/email"
 import { Reveal } from "@/components/ui/Reveal"
 
 const EVENT_TYPES = [
@@ -102,9 +103,15 @@ export function CoffeeCartClient() {
     if (!form.guestCount) missing.add("guestCount")
     if (!form.eventType) missing.add("eventType")
     if (!form.details) missing.add("details")
+    const emailInvalid = !!form.email && !isValidEmail(form.email)
+    if (emailInvalid) missing.add("email")
     if (missing.size > 0) {
       setErrors(missing)
-      showToast("Please fill in all required fields")
+      showToast(
+        missing.size === 1 && emailInvalid
+          ? "Please enter a valid email address"
+          : "Please fill in all required fields",
+      )
       return
     }
     setErrors(new Set())
@@ -198,7 +205,7 @@ export function CoffeeCartClient() {
         {/* Right — form */}
         <Reveal
           delay={150}
-          className="lg:col-span-3 relative rounded-2xl shadow-sm overflow-hidden p-8"
+          className="lg:col-span-3 relative rounded-2xl shadow-sm overflow-hidden p-0 sm:p-8"
           style={{ backgroundColor: "#F5EFE6" }}
         >
           <div
@@ -208,11 +215,11 @@ export function CoffeeCartClient() {
               backgroundPosition: "center center",
             }}
           />
-          <div className="relative bg-white/80 rounded-xl p-6 backdrop-blur-[2px] mx-14 my-16">
+          <div className="relative bg-white/80 rounded-xl p-6 backdrop-blur-[2px] mx-4 my-6 sm:mx-14 sm:my-16">
             <h3 className="font-serif text-2xl text-stone-900 mb-6">Inquire</h3>
             <form onSubmit={handleSubmit} className="space-y-4">
               {/* Name */}
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-medium text-stone-600 mb-1.5">
                     First Name *
@@ -238,7 +245,7 @@ export function CoffeeCartClient() {
               </div>
 
               {/* Contact */}
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-medium text-stone-600 mb-1.5">
                     Email *
@@ -265,7 +272,7 @@ export function CoffeeCartClient() {
               </div>
 
               {/* Date + time */}
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-medium text-stone-600 mb-1.5">
                     Desired Event Date *
@@ -297,7 +304,7 @@ export function CoffeeCartClient() {
               </div>
 
               {/* Guests + event type */}
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-medium text-stone-600 mb-1.5">
                     Estimated Guest Count *
@@ -345,7 +352,7 @@ export function CoffeeCartClient() {
               </div>
 
               {/* Flexible + how found */}
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-medium text-stone-600 mb-1.5">
                     Is your date flexible?

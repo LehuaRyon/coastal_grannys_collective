@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { showToast } from '@/components/ui/Toast';
+import { isValidEmail } from '@/lib/utils/email';
 import { WarningCircleIcon } from '@phosphor-icons/react';
 
 interface Redemption {
@@ -96,6 +97,7 @@ export default function AdminGiftCardsPage() {
     const amt = parseFloat(issueAmount);
     if (!amt || amt <= 0) return showToast('Enter a valid amount');
     if (!issueEmail.trim()) return showToast('Enter a recipient email');
+    if (!isValidEmail(issueEmail)) return showToast('Enter a valid email address');
     setIssuing(true);
     try {
       const res = await fetch('/api/admin/gift-cards', {
