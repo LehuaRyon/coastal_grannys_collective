@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/Button"
 import { PhoneInput } from "@/components/ui/PhoneInput"
 import { showToast } from "@/components/ui/Toast"
 import { useFormErrors } from "@/lib/hooks/useFormErrors"
+import { isValidEmail } from "@/lib/utils/email"
 import { Reveal } from "@/components/ui/Reveal"
 import { CheckCircleIcon } from "@phosphor-icons/react"
 import { useSession } from "next-auth/react"
@@ -67,9 +68,15 @@ export function WholesalePageClient({
     const missing = new Set<string>()
     if (!form.businessName) missing.add("businessName")
     if (!form.email) missing.add("email")
+    const emailInvalid = !!form.email && !isValidEmail(form.email)
+    if (emailInvalid) missing.add("email")
     if (missing.size > 0) {
       setErrors(missing)
-      showToast("Please fill in required fields")
+      showToast(
+        missing.size === 1 && emailInvalid
+          ? "Please enter a valid email address"
+          : "Please fill in required fields",
+      )
       return
     }
     setErrors(new Set())
@@ -91,7 +98,6 @@ export function WholesalePageClient({
 
   return (
     <>
-      {/* Hero */}
       <section
         className="relative overflow-hidden py-20 px-4"
         style={{ backgroundColor: "#F5EFE6" }}
@@ -126,10 +132,8 @@ export function WholesalePageClient({
         </div>
       </section>
 
-      {/* Body */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 py-16">
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-12 lg:gap-20">
-          {/* Info */}
           <Reveal>
             <h2 className="font-serif text-3xl text-stone-900 mb-4">
               {content.whyHeading}
@@ -158,11 +162,10 @@ export function WholesalePageClient({
             </ul>
           </Reveal>
 
-          {/* Form */}
           <Reveal
             delay={150}
             id="ws-form"
-            className="lg:col-span-3 relative rounded-2xl shadow-sm overflow-hidden p-8"
+            className="lg:col-span-3 relative rounded-2xl shadow-sm overflow-hidden p-0 sm:p-8"
             style={{ backgroundColor: "#F5EFE6" }}
           >
             <div
@@ -172,7 +175,7 @@ export function WholesalePageClient({
                 backgroundPosition: "center center",
               }}
             />
-            <div className="relative bg-white/80 rounded-xl p-6 backdrop-blur-[2px] mx-8 my-10">
+            <div className="relative bg-white/80 rounded-xl p-6 backdrop-blur-[2px] mx-4 my-6 sm:mx-14 sm:my-16">
               <h3 className="font-serif text-2xl text-stone-900 mb-6">
                 {content.formHeading}
               </h3>
@@ -208,7 +211,7 @@ export function WholesalePageClient({
                       className={`w-full border ${borderClass("businessName")} rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-amber-400 transition-colors`}
                     />
                   </div>
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div>
                       <label className="block text-xs font-medium text-stone-600 mb-1">
                         First Name
@@ -238,7 +241,7 @@ export function WholesalePageClient({
                       />
                     </div>
                   </div>
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div>
                       <label className="block text-xs font-medium text-stone-600 mb-1">
                         Email *
@@ -266,7 +269,7 @@ export function WholesalePageClient({
                       />
                     </div>
                   </div>
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div>
                       <label className="block text-xs font-medium text-stone-600 mb-1">
                         Business Type

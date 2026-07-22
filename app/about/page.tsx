@@ -1,6 +1,7 @@
 import Link from "next/link"
 import { prisma } from "@/lib/db"
 import { Reveal } from "@/components/ui/Reveal"
+import { AboutGallery } from "./AboutGallery"
 import {
   CoffeeBeanIcon,
   FlaskIcon,
@@ -62,7 +63,6 @@ export default async function AboutPage() {
 
   return (
     <>
-      {/* Hero */}
       <section
         className="relative overflow-hidden py-20 px-4 text-center"
         style={{ backgroundColor: "#F5EFE6" }}
@@ -87,7 +87,6 @@ export default async function AboutPage() {
         </div>
       </section>
 
-      {/* Story — Ryan's origin */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 py-16">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-14 items-center mb-20">
           <Reveal>
@@ -138,7 +137,6 @@ export default async function AboutPage() {
           </Reveal>
         </div>
 
-        {/* Story — Kelly + the cart */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-14 items-center mb-20">
           <Reveal className="order-2 lg:order-1 rounded-3xl overflow-hidden shadow-xl">
             <img
@@ -175,7 +173,6 @@ export default async function AboutPage() {
           </Reveal>
         </div>
 
-        {/* Values */}
         <h2 className="font-serif text-3xl text-stone-900 mb-6">
           What We Stand For
         </h2>
@@ -208,9 +205,12 @@ export default async function AboutPage() {
           ))}
         </div>
 
-        {/* Three image cards + quote */}
         <div className="mb-20">
-          <div className="grid grid-cols-3 gap-5 mb-5">
+          {/* Mobile: carousel (one image at a time). Desktop: 3-across grid. */}
+          <div className="sm:hidden mb-5">
+            <AboutGallery />
+          </div>
+          <div className="hidden sm:grid grid-cols-3 gap-5 mb-5">
             <Reveal className="rounded-3xl overflow-hidden shadow-xl aspect-[3/4]">
               <img
                 src="/images/about/cart-popup.png"
@@ -256,7 +256,6 @@ export default async function AboutPage() {
           </Reveal>
         </div>
 
-        {/* Meet the Duo */}
         <h2 className="font-serif text-3xl text-stone-900 mb-2">
           Meet the Duo
         </h2>
@@ -316,7 +315,6 @@ export default async function AboutPage() {
           </Reveal>
         </div>
 
-        {/* CTA */}
         <Reveal
           className="relative rounded-3xl p-10 text-center overflow-hidden"
           style={{ backgroundColor: "#F5EFE6" }}

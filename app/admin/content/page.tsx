@@ -110,7 +110,6 @@ export default function AdminContentPage() {
         <p className="text-sm text-stone-500 mt-1">Edit the text shown on each page of your site. Changes go live immediately.</p>
       </div>
 
-      {/* Page tabs */}
       <div className="flex flex-wrap gap-2">
         {(Object.keys(PAGE_LABELS) as PageKey[]).map((p) => (
           <button

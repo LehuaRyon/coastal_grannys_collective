@@ -43,7 +43,6 @@ const OFFERINGS = [
 export default function CoffeeCartPage() {
   return (
     <>
-      {/* Hero */}
       <section
         className="relative overflow-hidden"
         style={{ backgroundColor: "#F5EFE6" }}
@@ -93,12 +92,10 @@ export default function CoffeeCartPage() {
       {/* Carousel + What We Offer side by side */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 py-16">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 items-stretch mb-20">
-          {/* Left — carousel */}
           <Reveal>
             <CartCarousel />
           </Reveal>
 
-          {/* Right — offerings stacked */}
           <Reveal delay={150} className="flex flex-col justify-between py-2">
             <div>
               <p className="text-xs font-semibold text-amber-700 uppercase tracking-widest mb-2">
@@ -130,7 +127,6 @@ export default function CoffeeCartPage() {
         </div>
       </section>
 
-      {/* Inquiry form */}
       <div className="border-t border-stone-100">
         <CoffeeCartClient />
       </div>

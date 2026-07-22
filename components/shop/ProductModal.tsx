@@ -93,12 +93,12 @@ export function ProductModal({ product, onClose, onPrev, onNext, hasPrev, hasNex
       onNext={onNext}
       hasPrev={hasPrev}
       hasNext={hasNext}
+      mobileFullHeight
     >
       {product && (
-        <div className="grid md:grid-cols-[2fr_3fr] md:h-[740px]">
-          {/* Image */}
+        <div className="flex flex-col h-full md:grid md:grid-cols-[2fr_3fr] md:h-[740px]">
           <div
-            className={`flex flex-col items-center justify-center p-10 rounded-t-2xl md:rounded-l-2xl md:rounded-tr-none min-h-48 relative overflow-hidden ${!product.inStock ? 'opacity-70' : ''}`}
+            className={`flex flex-col items-center justify-center flex-shrink-0 p-6 sm:p-10 rounded-none md:rounded-l-2xl md:rounded-tr-none min-h-48 relative overflow-hidden ${!product.inStock ? 'opacity-70' : ''}`}
             style={{ background: product.gradient }}
           >
             {!imgError && (
@@ -116,7 +116,7 @@ export function ProductModal({ product, onClose, onPrev, onNext, hasPrev, hasNex
             )}
 
             {!product.inStock && (
-              <div className="absolute inset-0 flex items-center justify-center rounded-t-2xl md:rounded-l-2xl md:rounded-tr-none bg-black/40">
+              <div className="absolute inset-0 flex items-center justify-center rounded-none md:rounded-l-2xl md:rounded-tr-none bg-black/40">
                 <span className="bg-black/70 text-white text-sm font-bold uppercase tracking-widest px-4 py-2 rounded-full">
                   Out of Stock
                 </span>
@@ -127,8 +127,10 @@ export function ProductModal({ product, onClose, onPrev, onNext, hasPrev, hasNex
             </span>
           </div>
 
-          {/* Info */}
-          <div className="p-6 sm:p-8 overflow-y-auto max-h-[80vh] md:max-h-[740px] flex flex-col">
+          {/* Info — on mobile this fills the remaining sheet height below the fixed
+              image and is the single internal scroll container. On desktop (md+) it's a
+              fixed-height column that scrolls independently of the image column. */}
+          <div className="p-6 sm:p-8 flex flex-col flex-1 min-h-0 overflow-y-auto md:flex-none md:max-h-[740px]">
             <p className="text-xs text-amber-700 font-semibold uppercase tracking-widest mb-1">
               {product.origin}
             </p>
@@ -143,7 +145,6 @@ export function ProductModal({ product, onClose, onPrev, onNext, hasPrev, hasNex
 
             <p className="text-sm text-stone-600 leading-relaxed mb-5">{product.description}</p>
 
-            {/* Specs */}
             <div className="grid grid-cols-2 gap-2 mb-5">
               {[
                 ['Process', product.process],

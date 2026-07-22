@@ -102,7 +102,6 @@ export default async function AccountDashboard() {
   return (
     <div className="min-h-screen bg-stone-50">
       <div className="max-w-4xl mx-auto px-4 sm:px-6 py-12">
-        {/* Header */}
         <div className="flex items-center justify-between mb-10">
           <div>
             <h1 className="font-serif text-3xl text-stone-900">My Account</h1>
@@ -111,7 +110,6 @@ export default async function AccountDashboard() {
           <SignOutButton />
         </div>
 
-        {/* Account info */}
         <div className="bg-white rounded-2xl border border-stone-100 shadow-sm p-6 mb-8">
           <h2 className="font-medium text-stone-900 mb-4">Account Details</h2>
           <div className="grid grid-cols-2 gap-4 text-sm">
@@ -214,7 +212,6 @@ export default async function AccountDashboard() {
           }}
         />
 
-        {/* Order history */}
         <div className="bg-white rounded-2xl border border-stone-100 shadow-sm overflow-hidden">
           <div className="px-6 py-4 border-b border-stone-100">
             <h2 className="font-medium text-stone-900">Order History</h2>

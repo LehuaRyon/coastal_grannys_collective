@@ -67,7 +67,6 @@ export default async function HomePage() {
 
   return (
     <>
-      {/* ── Hero ── */}
       <section
         className="relative overflow-hidden min-h-screen flex items-center"
         style={{ backgroundColor: "#F5EFE6" }}
@@ -140,7 +139,6 @@ export default async function HomePage() {
         </div>
       </section>
 
-      {/* ── Featured Coffees ── */}
       <section className="bg-white py-20 px-4 sm:px-6">
         <div className="max-w-7xl mx-auto">
           <Reveal>
@@ -205,7 +203,6 @@ export default async function HomePage() {
         </div>
       </section>
 
-      {/* ── Subscription CTA ── */}
       <section
         className="relative py-20 px-4 sm:px-6 overflow-hidden"
         style={{ backgroundColor: "#F5EFE6" }}
@@ -244,7 +241,6 @@ export default async function HomePage() {
         </Reveal>
       </section>
 
-      {/* ── Brand Story ── */}
       <section className="bg-stone-50 py-20 px-4 sm:px-6">
         <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
           <Reveal className="rounded-3xl h-72 lg:h-96 overflow-hidden">
@@ -280,7 +276,6 @@ export default async function HomePage() {
         </div>
       </section>
 
-      {/* ── Values strip ── */}
       <section
         className="relative border-t border-stone-100 py-14 px-4 sm:px-6 overflow-hidden"
         style={{ backgroundColor: "#F5EFE6" }}

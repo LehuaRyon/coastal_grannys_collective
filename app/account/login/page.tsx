@@ -7,6 +7,7 @@ import Link from "next/link"
 import { useRouter, useSearchParams } from "next/navigation"
 import { Suspense, useState } from "react"
 import { useFormErrors } from "@/lib/hooks/useFormErrors"
+import { isValidEmail } from "@/lib/utils/email"
 
 function LoginForm() {
   const router = useRouter()
@@ -25,6 +26,11 @@ function LoginForm() {
     if (missing.size > 0) {
       setErrors(missing)
       showToast("Please fill in all fields")
+      return
+    }
+    if (!isValidEmail(form.email)) {
+      setErrors(new Set(["email"]))
+      showToast("Please enter a valid email address")
       return
     }
     setErrors(new Set())

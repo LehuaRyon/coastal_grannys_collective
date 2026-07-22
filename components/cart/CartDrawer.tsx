@@ -76,7 +76,6 @@ export function CartDrawer() {
 
   return (
     <>
-      {/* Overlay */}
       <div
         className={`fixed inset-0 z-40 bg-black/40 transition-opacity duration-300 ${
           isOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
@@ -84,14 +83,12 @@ export function CartDrawer() {
         onClick={closeCart}
       />
 
-      {/* Drawer */}
       <aside
         className={`fixed inset-y-0 right-0 z-50 w-full sm:w-96 bg-white shadow-2xl flex flex-col transition-transform duration-300 ease-in-out ${
           isOpen ? 'translate-x-0' : 'translate-x-full'
         }`}
         aria-label="Shopping cart"
       >
-        {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-stone-100">
           <h2 className="font-serif text-lg text-stone-900">
             Your Cart{' '}
@@ -107,7 +104,6 @@ export function CartDrawer() {
           </button>
         </div>
 
-        {/* Body */}
         <div className="flex-1 overflow-y-auto px-6 py-4">
           {items.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-full text-center gap-4 py-12">
@@ -161,7 +157,6 @@ export function CartDrawer() {
           )}
         </div>
 
-        {/* Footer */}
         {items.length > 0 && (
           <div className="px-6 py-4 border-t border-stone-100 space-y-3">
             <div className="space-y-1.5 text-sm">

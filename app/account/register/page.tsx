@@ -5,6 +5,7 @@ import { PhoneInput } from "@/components/ui/PhoneInput"
 import { StateSelect } from "@/components/ui/StateSelect"
 import { showToast } from "@/components/ui/Toast"
 import { useFormErrors } from "@/lib/hooks/useFormErrors"
+import { isValidEmail } from "@/lib/utils/email"
 import { sanitizeZip, sanitizeCity } from "@/lib/utils/numberInput"
 import { signIn } from "next-auth/react"
 import Link from "next/link"
@@ -41,6 +42,11 @@ export default function RegisterPage() {
     if (missing.size > 0) {
       setErrors(missing)
       showToast("Please fill in all required fields")
+      return
+    }
+    if (!isValidEmail(form.email)) {
+      setErrors(new Set(["email"]))
+      showToast("Please enter a valid email address")
       return
     }
     if (form.password.length < 8) {

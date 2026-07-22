@@ -6,7 +6,6 @@ export function Footer() {
     <footer className="text-stone-300 mt-24" style={{ backgroundColor: '#4A6035' }}>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 py-16">
         <div className="grid grid-cols-2 md:grid-cols-4 gap-8 lg:gap-12">
-          {/* Brand */}
           <div className="col-span-2 md:col-span-1">
             <Link href="/" className="flex items-center gap-2.5 group mb-4">
               <img src="/images/flower-logo.png" alt="" width={44} height={44} className="group-hover:rotate-12 transition-transform duration-300" />
@@ -30,7 +29,6 @@ export function Footer() {
             </div>
           </div>
 
-          {/* Shop */}
           <div>
             <h4 className="text-white font-semibold text-sm mb-4">Shop</h4>
             <div className="space-y-2.5">
@@ -51,7 +49,6 @@ export function Footer() {
             </div>
           </div>
 
-          {/* Company */}
           <div>
             <h4 className="text-white font-semibold text-sm mb-4">Company</h4>
             <div className="space-y-2.5">
@@ -72,7 +69,6 @@ export function Footer() {
             </div>
           </div>
 
-          {/* Help */}
           <div>
             <h4 className="text-white font-semibold text-sm mb-4">Help</h4>
             <div className="space-y-2.5">

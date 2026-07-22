@@ -6,6 +6,7 @@ import { PhoneInput } from "@/components/ui/PhoneInput"
 import { StateSelect } from "@/components/ui/StateSelect"
 import { showToast } from "@/components/ui/Toast"
 import { useFormErrors } from "@/lib/hooks/useFormErrors"
+import { isValidEmail } from "@/lib/utils/email"
 import { sortCartItems, useCartStore } from "@/lib/store/cart"
 import { sanitizeZip, sanitizeCity } from "@/lib/utils/numberInput"
 import { getStripe } from "@/lib/stripe"
@@ -586,9 +587,15 @@ export function CheckoutModal({ isOpen, onClose }: CheckoutModalProps) {
                       const missing = new Set<string>()
                       if (!contact.firstName) missing.add("firstName")
                       if (!contact.email) missing.add("email")
+                      const emailInvalid = !!contact.email && !isValidEmail(contact.email)
+                      if (emailInvalid) missing.add("email")
                       if (missing.size > 0) {
                         setErrors(missing)
-                        showToast("Please fill in all required fields")
+                        showToast(
+                          missing.size === 1 && emailInvalid
+                            ? "Please enter a valid email address"
+                            : "Please fill in all required fields",
+                        )
                         return
                       }
                       setErrors(new Set())

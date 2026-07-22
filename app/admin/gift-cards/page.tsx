@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { showToast } from '@/components/ui/Toast';
+import { isValidEmail } from '@/lib/utils/email';
 import { WarningCircleIcon } from '@phosphor-icons/react';
 
 interface Redemption {
@@ -96,6 +97,7 @@ export default function AdminGiftCardsPage() {
     const amt = parseFloat(issueAmount);
     if (!amt || amt <= 0) return showToast('Enter a valid amount');
     if (!issueEmail.trim()) return showToast('Enter a recipient email');
+    if (!isValidEmail(issueEmail)) return showToast('Enter a valid email address');
     setIssuing(true);
     try {
       const res = await fetch('/api/admin/gift-cards', {
@@ -200,7 +202,6 @@ export default function AdminGiftCardsPage() {
         </button>
       </div>
 
-      {/* Cron health */}
       {(cronStale || overdueCount > 0) && (
         <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 text-sm text-amber-800">
           {cronStale && (
@@ -231,7 +232,6 @@ export default function AdminGiftCardsPage() {
         </p>
       )}
 
-      {/* Issue new gift card */}
       {issueOpen && (
         <div className="bg-white rounded-xl border border-stone-100 p-5 space-y-3">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -267,7 +267,6 @@ export default function AdminGiftCardsPage() {
         </div>
       )}
 
-      {/* Search */}
       <form onSubmit={handleSearch} className="flex gap-2">
         <input
           type="text"
