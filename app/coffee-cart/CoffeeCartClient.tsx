@@ -158,7 +158,6 @@ export function CoffeeCartClient() {
   return (
     <section className="max-w-7xl mx-auto px-4 sm:px-6 py-16" id="inquiry">
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-12 items-start">
-        {/* Left — copy */}
         <Reveal>
           <p className="text-xs font-semibold text-amber-700 uppercase tracking-widest mb-3">
             Book the Cart
@@ -202,7 +201,6 @@ export function CoffeeCartClient() {
           </div>
         </Reveal>
 
-        {/* Right — form */}
         <Reveal
           delay={150}
           className="lg:col-span-3 relative rounded-2xl shadow-sm overflow-hidden p-0 sm:p-8"
@@ -218,7 +216,6 @@ export function CoffeeCartClient() {
           <div className="relative bg-white/80 rounded-xl p-6 backdrop-blur-[2px] mx-4 my-6 sm:mx-14 sm:my-16">
             <h3 className="font-serif text-2xl text-stone-900 mb-6">Inquire</h3>
             <form onSubmit={handleSubmit} className="space-y-4">
-              {/* Name */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-medium text-stone-600 mb-1.5">
@@ -244,7 +241,6 @@ export function CoffeeCartClient() {
                 </div>
               </div>
 
-              {/* Contact */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-medium text-stone-600 mb-1.5">
@@ -271,7 +267,6 @@ export function CoffeeCartClient() {
                 </div>
               </div>
 
-              {/* Date + time */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-medium text-stone-600 mb-1.5">
@@ -303,7 +298,6 @@ export function CoffeeCartClient() {
                 </div>
               </div>
 
-              {/* Guests + event type */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-medium text-stone-600 mb-1.5">
@@ -338,7 +332,6 @@ export function CoffeeCartClient() {
                 </div>
               </div>
 
-              {/* Occasion */}
               <div>
                 <label className="block text-xs font-medium text-stone-600 mb-1.5">
                   What are we celebrating?
@@ -351,7 +344,6 @@ export function CoffeeCartClient() {
                 />
               </div>
 
-              {/* Flexible + how found */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-medium text-stone-600 mb-1.5">
@@ -387,7 +379,6 @@ export function CoffeeCartClient() {
                 </div>
               </div>
 
-              {/* Details */}
               <div>
                 <label className="block text-xs font-medium text-stone-600 mb-1.5">
                   Tell us about your event *

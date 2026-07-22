@@ -97,7 +97,6 @@ export function ProductModal({ product, onClose, onPrev, onNext, hasPrev, hasNex
     >
       {product && (
         <div className="flex flex-col h-full md:grid md:grid-cols-[2fr_3fr] md:h-[740px]">
-          {/* Image */}
           <div
             className={`flex flex-col items-center justify-center flex-shrink-0 p-6 sm:p-10 rounded-none md:rounded-l-2xl md:rounded-tr-none min-h-48 relative overflow-hidden ${!product.inStock ? 'opacity-70' : ''}`}
             style={{ background: product.gradient }}
@@ -146,7 +145,6 @@ export function ProductModal({ product, onClose, onPrev, onNext, hasPrev, hasNex
 
             <p className="text-sm text-stone-600 leading-relaxed mb-5">{product.description}</p>
 
-            {/* Specs */}
             <div className="grid grid-cols-2 gap-2 mb-5">
               {[
                 ['Process', product.process],

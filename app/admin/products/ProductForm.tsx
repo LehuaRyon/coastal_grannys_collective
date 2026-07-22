@@ -137,7 +137,6 @@ export default function ProductForm({ product }: { product?: Product }) {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
-      {/* Core */}
       <div className="bg-white rounded-xl border border-stone-100 p-5 space-y-4">
         <h2 className="font-medium text-stone-900 text-sm">Core</h2>
         <div className="grid grid-cols-2 gap-4">
@@ -217,7 +216,6 @@ export default function ProductForm({ product }: { product?: Product }) {
         </div>
       </div>
 
-      {/* Coffee-specific */}
       {form.type === 'coffee' && (
         <div className="bg-white rounded-xl border border-stone-100 p-5 space-y-4">
           <h2 className="font-medium text-stone-900 text-sm">Coffee Details</h2>
@@ -256,7 +254,6 @@ export default function ProductForm({ product }: { product?: Product }) {
         </div>
       )}
 
-      {/* Subscription-specific */}
       {form.type === 'subscription' && (
         <div className="bg-white rounded-xl border border-stone-100 p-5 space-y-4">
           <h2 className="font-medium text-stone-900 text-sm">Subscription Details</h2>
@@ -295,7 +292,6 @@ export default function ProductForm({ product }: { product?: Product }) {
         </div>
       )}
 
-      {/* Merch-specific */}
       {form.type === 'merch' && (
         <div className="bg-white rounded-xl border border-stone-100 p-5 space-y-4">
           <h2 className="font-medium text-stone-900 text-sm">Merch Details</h2>
@@ -303,7 +299,6 @@ export default function ProductForm({ product }: { product?: Product }) {
         </div>
       )}
 
-      {/* Display */}
       <div className="bg-white rounded-xl border border-stone-100 p-5 space-y-4">
         <h2 className="font-medium text-stone-900 text-sm">Display</h2>
         <div className="grid grid-cols-2 gap-4">
@@ -316,7 +311,6 @@ export default function ProductForm({ product }: { product?: Product }) {
         </div>
       </div>
 
-      {/* Actions */}
       <div className="flex items-center gap-3">
         <button
           type="submit"

@@ -39,7 +39,6 @@ export function CartCarousel() {
           />
         ))}
 
-        {/* Prev */}
         <button
           onClick={prev}
           className="absolute left-4 top-1/2 -translate-y-1/2 w-10 h-10 flex items-center justify-center rounded-full bg-black/40 hover:bg-black/60 text-white transition-colors"
@@ -48,7 +47,6 @@ export function CartCarousel() {
           ‹
         </button>
 
-        {/* Next */}
         <button
           onClick={next}
           className="absolute right-4 top-1/2 -translate-y-1/2 w-10 h-10 flex items-center justify-center rounded-full bg-black/40 hover:bg-black/60 text-white transition-colors"
@@ -57,7 +55,6 @@ export function CartCarousel() {
           ›
         </button>
 
-        {/* Dots */}
         <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2">
           {IMAGES.map((_, i) => (
             <button

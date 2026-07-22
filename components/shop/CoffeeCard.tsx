@@ -50,7 +50,6 @@ export function CoffeeCard({ coffee, onViewDetails }: CoffeeCardProps) {
       className={`group bg-white rounded-2xl shadow-sm transition-all duration-300 overflow-hidden cursor-pointer border border-stone-100 ${coffee.inStock ? 'hover:shadow-md hover:border-stone-200' : 'opacity-60'}`}
       onClick={() => onViewDetails(coffee)}
     >
-      {/* Image area */}
       <div
         className="relative h-48 flex items-center justify-center overflow-hidden"
         style={{ background: coffee.gradient }}
@@ -96,7 +95,6 @@ export function CoffeeCard({ coffee, onViewDetails }: CoffeeCardProps) {
         </span>
       </div>
 
-      {/* Body */}
       {/* TODO: Display average star rating here (e.g. ★ 4.2 · 18 reviews).
           Ratings should only be submitted by customers who have ordered this coffee
           and are logged in. Requires: a Rating model in the DB (userId, coffeeId, stars 1–5),

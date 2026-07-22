@@ -52,7 +52,6 @@ export default async function AdminDashboard() {
         <p className="text-sm text-stone-500 mt-1">Overview of your store</p>
       </div>
 
-      {/* Stats */}
       <div className="grid grid-cols-2 lg:grid-cols-7 gap-4">
         {[
           { label: 'Products', value: totalProducts },
@@ -71,7 +70,6 @@ export default async function AdminDashboard() {
         ))}
       </div>
 
-      {/* Disputes needing attention */}
       {disputedOrders.length > 0 && (
         <div className="bg-orange-50 border border-orange-200 rounded-xl p-4 text-sm text-orange-800 space-y-2">
           <p className="flex items-start gap-1.5 font-medium">
@@ -98,7 +96,6 @@ export default async function AdminDashboard() {
         <WebhookHealthCard />
       </div>
 
-      {/* Quick links */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {quickLinks.map((l) => (
           <Link
@@ -113,7 +110,6 @@ export default async function AdminDashboard() {
         ))}
       </div>
 
-      {/* Recent orders */}
       <div className="bg-white rounded-xl border border-stone-100 overflow-hidden">
         <div className="px-6 py-4 border-b border-stone-100 flex items-center justify-between">
           <h2 className="font-medium text-stone-900">Recent Orders</h2>

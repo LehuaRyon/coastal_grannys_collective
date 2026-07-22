@@ -99,7 +99,6 @@ export default function ContactPageClient({ details }: { details: Details }) {
   return (
     <section className="max-w-7xl mx-auto px-4 sm:px-6 py-14">
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-12 lg:gap-20">
-        {/* Info */}
         <div>
           <p className="text-xs font-semibold text-amber-700 uppercase tracking-widest mb-2">
             Get in Touch
@@ -141,7 +140,6 @@ export default function ContactPageClient({ details }: { details: Details }) {
           </div>
         </div>
 
-        {/* Form */}
         <div className="lg:col-span-3 relative rounded-2xl shadow-sm overflow-hidden p-0 sm:p-8" style={{ backgroundColor: '#F5EFE6' }}>
           <div className="absolute inset-0 bg-cover bg-no-repeat" style={{ backgroundImage: 'url(/images/contact-bg.png)', backgroundPosition: 'center center' }} />
           <div className="relative bg-white/80 rounded-xl p-6 backdrop-blur-[2px] mx-4 my-6 sm:mx-14 sm:my-16">

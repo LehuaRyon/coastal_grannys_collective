@@ -281,7 +281,6 @@ export default function BrewingGuidesPage() {
         brewing our co-fermented and experimental lots.
       </p>
 
-      {/* Quick pick */}
       <div className="mb-14 p-6 rounded-2xl border border-stone-100 bg-stone-50">
         <h2 className="font-semibold text-stone-900 mb-4 text-sm uppercase tracking-wide">
           Not sure where to start?
@@ -317,7 +316,6 @@ export default function BrewingGuidesPage() {
         </div>
       </div>
 
-      {/* Quick reference matrix */}
       <section className="mb-14">
         <h2 className="font-serif text-2xl text-stone-900 mb-6 pb-3 border-b border-stone-100">
           At a Glance
@@ -367,7 +365,6 @@ export default function BrewingGuidesPage() {
         </div>
       </section>
 
-      {/* Individual method deep-dives */}
       <div className="space-y-16">
         {METHODS.map((m) => (
           <section key={m.name}>
@@ -377,7 +374,6 @@ export default function BrewingGuidesPage() {
             </div>
             <p className="text-stone-400 text-sm italic mb-6">{m.tagline}</p>
 
-            {/* Specs row */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
               {[
                 { label: "Grind", val: m.grind },
@@ -400,7 +396,6 @@ export default function BrewingGuidesPage() {
             </div>
 
             <div className="grid sm:grid-cols-2 gap-8 mb-6">
-              {/* Equipment */}
               <div>
                 <h3 className="text-xs font-semibold text-stone-400 uppercase tracking-wider mb-3">
                   Equipment
@@ -417,7 +412,6 @@ export default function BrewingGuidesPage() {
                 </ul>
               </div>
 
-              {/* Tips */}
               <div>
                 <h3 className="text-xs font-semibold text-stone-400 uppercase tracking-wider mb-3">
                   Tips
@@ -435,7 +429,6 @@ export default function BrewingGuidesPage() {
               </div>
             </div>
 
-            {/* Steps */}
             <div className="mb-6">
               <h3 className="text-xs font-semibold text-stone-400 uppercase tracking-wider mb-3">
                 How to Brew
@@ -466,7 +459,6 @@ export default function BrewingGuidesPage() {
         ))}
       </div>
 
-      {/* General tips */}
       <section className="mt-20">
         <h2 className="font-serif text-2xl text-stone-900 mb-6 pb-3 border-b border-stone-100">
           Universal Principles
@@ -485,7 +477,6 @@ export default function BrewingGuidesPage() {
         </div>
       </section>
 
-      {/* CTA */}
       <div
         className="mt-16 text-center relative rounded-2xl shadow-sm overflow-hidden p-10"
         style={{ backgroundColor: "#F5EFE6" }}

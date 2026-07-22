@@ -178,7 +178,6 @@ export function CoffeePageClient({ coffees }: { coffees: Coffee[] }) {
 
   return (
     <>
-      {/* Hero */}
       <section
         className="relative overflow-hidden"
         style={{ backgroundColor: "#F5EFE6" }}
@@ -224,7 +223,6 @@ export function CoffeePageClient({ coffees }: { coffees: Coffee[] }) {
         </div>
       </section>
 
-      {/* Products */}
       <section
         className="max-w-7xl mx-auto px-4 sm:px-6 py-14"
         id="coffee-grid"
@@ -242,10 +240,8 @@ export function CoffeePageClient({ coffees }: { coffees: Coffee[] }) {
           </p>
         </div>
 
-        {/* Filter bar */}
         <div className="space-y-3 mb-8">
 
-          {/* Stock */}
           <div className="flex gap-2 items-center overflow-x-auto pb-0.5 scrollbar-hide">
             <span className="text-xs font-semibold text-stone-400 uppercase tracking-wide w-14 flex-shrink-0">Stock</span>
             {(
@@ -273,7 +269,6 @@ export function CoffeePageClient({ coffees }: { coffees: Coffee[] }) {
             )}
           </div>
 
-          {/* Roast */}
           <div className="flex gap-2 items-center overflow-x-auto pb-0.5 scrollbar-hide">
             <span className="text-xs font-semibold text-stone-400 uppercase tracking-wide w-14 flex-shrink-0">Roast</span>
             {ROAST_FILTERS.map((f) => {
@@ -298,7 +293,6 @@ export function CoffeePageClient({ coffees }: { coffees: Coffee[] }) {
             })}
           </div>
 
-          {/* Origin */}
           {countries.length > 1 && (
             <div className="flex gap-2 items-center overflow-x-auto pb-0.5 scrollbar-hide">
               <span className="text-xs font-semibold text-stone-400 uppercase tracking-wide w-14 flex-shrink-0">Origin</span>
@@ -320,7 +314,6 @@ export function CoffeePageClient({ coffees }: { coffees: Coffee[] }) {
             </div>
           )}
 
-          {/* Badge */}
           <div className="flex gap-2 items-center overflow-x-auto pb-0.5 scrollbar-hide">
             <span className="text-xs font-semibold text-stone-400 uppercase tracking-wide w-14 flex-shrink-0">Badge</span>
             {BADGE_OPTIONS.map(({ label, value }) => (
@@ -343,7 +336,6 @@ export function CoffeePageClient({ coffees }: { coffees: Coffee[] }) {
             ))}
           </div>
 
-          {/* Flavor families */}
           <div className="flex gap-2 items-center overflow-x-auto pb-0.5 scrollbar-hide">
             <span className="text-xs font-semibold text-stone-400 uppercase tracking-wide w-14 flex-shrink-0">Flavor</span>
             {FLAVOR_FAMILIES.map(({ label, isAll }) => {
@@ -363,7 +355,6 @@ export function CoffeePageClient({ coffees }: { coffees: Coffee[] }) {
             })}
           </div>
 
-          {/* Sort */}
           <div className="flex gap-2 items-center overflow-x-auto pb-0.5 scrollbar-hide">
             <span className="text-xs font-semibold text-stone-400 uppercase tracking-wide w-14 flex-shrink-0">Sort</span>
             {SORT_OPTIONS.map(({ label, value }) => (

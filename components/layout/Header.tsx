@@ -81,7 +81,6 @@ export function Header() {
         }`}
       >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
-          {/* Hamburger */}
           <button
             className="lg:hidden p-2 -ml-2 flex flex-col gap-1.5 group"
             onClick={() => setMobileOpen(true)}
@@ -92,7 +91,6 @@ export function Header() {
             <span className="block w-4 h-0.5 bg-stone-800 transition-all group-hover:w-6" />
           </button>
 
-          {/* Logo */}
           <Link href="/" className="flex items-center gap-2.5 group">
             <img src="/images/flower-logo.png" alt="" width={44} height={44} className="group-hover:rotate-12 transition-transform duration-300" />
             <span className="font-serif leading-tight text-lg font-bold">
@@ -102,9 +100,7 @@ export function Header() {
             </span>
           </Link>
 
-          {/* Desktop nav */}
           <nav className="hidden lg:flex items-center gap-1">
-            {/* Shop dropdown */}
             <div
               ref={shopRef}
               className="relative"
@@ -169,9 +165,7 @@ export function Header() {
             ))}
           </nav>
 
-          {/* Right actions */}
           <div className="flex items-center gap-2">
-            {/* Cart */}
             <button
               onClick={toggleCart}
               className="relative p-2 text-stone-700 hover:text-stone-900 hover:bg-stone-100 rounded-full transition-colors"
@@ -185,7 +179,6 @@ export function Header() {
               )}
             </button>
 
-            {/* User menu — logged in */}
             {session ? (
               <div
                 ref={userRef}

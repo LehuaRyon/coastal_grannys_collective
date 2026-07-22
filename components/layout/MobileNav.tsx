@@ -38,7 +38,6 @@ export function MobileNav({ isOpen, onClose, session }: MobileNavProps) {
 
   return (
     <>
-      {/* Overlay */}
       <div
         className={`fixed inset-0 z-40 bg-black/40 transition-opacity duration-300 lg:hidden ${
           isOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
@@ -46,7 +45,6 @@ export function MobileNav({ isOpen, onClose, session }: MobileNavProps) {
         onClick={onClose}
       />
 
-      {/* Drawer */}
       <nav
         className={`fixed inset-y-0 left-0 z-50 w-72 bg-white shadow-2xl transition-transform duration-300 ease-in-out flex flex-col lg:hidden ${
           isOpen ? 'translate-x-0' : '-translate-x-full'
@@ -124,7 +122,6 @@ export function MobileNav({ isOpen, onClose, session }: MobileNavProps) {
             ))}
           </div>
 
-          {/* Account / Admin links */}
           {session && (
             <div className="space-y-1">
               <p className="text-xs font-semibold text-stone-400 uppercase tracking-widest mb-2 px-2">

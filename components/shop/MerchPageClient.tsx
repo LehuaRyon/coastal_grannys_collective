@@ -51,7 +51,6 @@ export function MerchPageClient({ merch }: { merch: Merch[] }) {
               onClick={() => setSelected(m)}
               className="group bg-white rounded-2xl shadow-sm border border-stone-100 overflow-hidden cursor-pointer hover:shadow-md hover:border-stone-200 transition-all duration-300"
             >
-              {/* Image */}
               <div className="relative overflow-hidden" style={{ aspectRatio: "1 / 1" }}>
                 {m.hasImage ? (
                   <>
@@ -89,7 +88,6 @@ export function MerchPageClient({ merch }: { merch: Merch[] }) {
 
               </div>
 
-              {/* Name + price */}
               <div className="px-4 py-3 flex items-center justify-between">
                 <div>
                   <p className="font-serif text-base text-stone-900 group-hover:text-amber-700 transition-colors">{m.name}</p>

@@ -98,7 +98,6 @@ export function WholesalePageClient({
 
   return (
     <>
-      {/* Hero */}
       <section
         className="relative overflow-hidden py-20 px-4"
         style={{ backgroundColor: "#F5EFE6" }}
@@ -133,10 +132,8 @@ export function WholesalePageClient({
         </div>
       </section>
 
-      {/* Body */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 py-16">
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-12 lg:gap-20">
-          {/* Info */}
           <Reveal>
             <h2 className="font-serif text-3xl text-stone-900 mb-4">
               {content.whyHeading}
@@ -165,7 +162,6 @@ export function WholesalePageClient({
             </ul>
           </Reveal>
 
-          {/* Form */}
           <Reveal
             delay={150}
             id="ws-form"
