@@ -17,6 +17,11 @@ interface ModalProps {
   // Set false for modals with a lot of typed state (e.g. multi-step checkout)
   // where an accidental backdrop click shouldn't wipe out what the user entered.
   closeOnBackdropClick?: boolean;
+  // On mobile (< md), render as a full-bleed sheet that fills the phone's dynamic
+  // viewport height (100dvh) instead of a centered, max-h-[90vh] floating card. The
+  // modal's own content is then responsible for scrolling internally. Desktop (md+)
+  // is unaffected. Opt in for modals whose content should own the whole screen.
+  mobileFullHeight?: boolean;
 }
 
 export function Modal({
@@ -29,6 +34,7 @@ export function Modal({
   hasPrev = false,
   hasNext = false,
   closeOnBackdropClick = true,
+  mobileFullHeight = false,
 }: ModalProps) {
   const backdropRef = useRef<HTMLDivElement>(null);
 
@@ -58,7 +64,9 @@ export function Modal({
   return (
     <div
       ref={backdropRef}
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
+      className={`fixed inset-0 z-50 flex justify-center bg-black/50 backdrop-blur-sm ${
+        mobileFullHeight ? 'items-stretch p-0 md:items-center md:p-4' : 'items-center p-4'
+      }`}
       onClick={(e) => {
         if (closeOnBackdropClick && e.target === backdropRef.current) onClose();
       }}
@@ -89,7 +97,13 @@ export function Modal({
             <CaretRightIcon size={20} weight="bold" />
           </button>
         )}
-        <div className="relative bg-white rounded-2xl shadow-2xl w-full max-h-[90vh] overflow-y-auto">
+        <div
+          className={`relative bg-white shadow-2xl w-full ${
+            mobileFullHeight
+              ? 'h-[100dvh] overflow-hidden rounded-none md:h-auto md:max-h-[90vh] md:overflow-y-auto md:rounded-2xl'
+              : 'max-h-[90vh] overflow-y-auto rounded-2xl'
+          }`}
+        >
           <button
             onClick={onClose}
             className="absolute top-4 right-4 z-10 w-8 h-8 flex items-center justify-center rounded-full bg-stone-100 hover:bg-stone-200 text-stone-500 transition-colors text-sm"

@@ -64,10 +64,13 @@ export function MerchModal({ product: m, onClose, onPrev, onNext, hasPrev, hasNe
       onNext={onNext}
       hasPrev={hasPrev}
       hasNext={hasNext}
+      mobileFullHeight
     >
-      <div className="grid md:grid-cols-[2fr_3fr] md:h-[560px]">
-        {/* Image */}
-        <div className="relative overflow-hidden rounded-t-2xl md:rounded-l-2xl md:rounded-tr-none bg-stone-50 flex items-center justify-center min-h-64">
+      <div className="flex flex-col h-full md:grid md:grid-cols-[2fr_3fr] md:h-[560px]">
+        {/* Image — on mobile it grows (flex-1) to fill the leftover sheet height so
+            more of the product photo is visible instead of leaving an empty gap. On
+            desktop it's a grid cell, so flex-grow is inert and the 2fr track governs. */}
+        <div className="relative flex-1 overflow-hidden rounded-none md:rounded-l-2xl md:rounded-tr-none bg-stone-50 flex items-center justify-center min-h-64">
           {m.hasImage ? (
             <>
               <img
@@ -97,8 +100,10 @@ export function MerchModal({ product: m, onClose, onPrev, onNext, hasPrev, hasNe
           )}
         </div>
 
-        {/* Info */}
-        <div className="p-6 sm:p-8 flex flex-col justify-between overflow-y-auto max-h-[80vh] md:max-h-[560px]">
+        {/* Info — on mobile it sizes to its content and sits at the bottom of the sheet
+            (the image above absorbs the slack), so there's no empty gap. On desktop it's a
+            fixed-height column that space-distributes and scrolls independently. */}
+        <div className="p-6 sm:p-8 flex flex-col overflow-y-auto md:justify-between md:max-h-[560px]">
           <div>
             <h2 className="font-serif text-2xl text-stone-900 mb-2">{m.name}</h2>
             <p className="text-sm text-stone-500 leading-relaxed mb-6">{m.desc}</p>
